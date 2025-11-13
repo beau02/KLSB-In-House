@@ -1,8 +1,14 @@
 @echo off
-echo Starting Backend and Frontend...
-start "Backend Server" cmd /k "cd backend && npm run dev"
-timeout /t 3 /nobreak > nul
-start "Frontend Server" cmd /k "cd frontend && npm run dev"
 echo.
-echo Backend: http://localhost:5000
-echo Frontend: http://localhost:3000
+echo ========================================
+echo   KLSB Timesheet System - Starting...
+echo ========================================
+echo.
+start "KLSB Backend" cmd /k "cd /d %~dp0backend && npm run dev"
+start "KLSB Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
+echo.
+echo Backend Server: http://localhost:5000
+echo Frontend Server: http://localhost:3000
+echo.
+echo Check the separate windows for server logs.
+echo.
