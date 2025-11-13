@@ -9,6 +9,8 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { TimesheetsScreen } from '../screens/TimesheetsScreen';
 import { ProjectsScreen } from '../screens/ProjectsScreen';
+import { NewTimesheetScreen } from '../screens/NewTimesheetScreen';
+import { TimesheetDetailScreen } from '../screens/TimesheetDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -50,11 +52,31 @@ export const AppNavigator = () => {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator>
         {!isAuthenticated ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
         ) : (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen 
+              name="Main" 
+              component={MainTabs}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="NewTimesheet" 
+              component={NewTimesheetScreen}
+              options={{ title: 'New Timesheet' }}
+            />
+            <Stack.Screen 
+              name="TimesheetDetail" 
+              component={TimesheetDetailScreen}
+              options={{ title: 'Timesheet Details' }}
+            />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

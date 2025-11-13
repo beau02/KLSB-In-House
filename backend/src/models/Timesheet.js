@@ -5,9 +5,15 @@ const timesheetEntrySchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  hours: {
+  normalHours: {
     type: Number,
-    required: true,
+    default: 0,
+    min: 0,
+    max: 24
+  },
+  otHours: {
+    type: Number,
+    default: 0,
     min: 0,
     max: 24
   },
@@ -61,6 +67,14 @@ const timesheetSchema = new mongoose.Schema({
   totalHours: {
     type: Number,
     default: 0
+  },
+  totalNormalHours: {
+    type: Number,
+    default: 0
+  },
+  totalOTHours: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -68,7 +82,9 @@ const timesheetSchema = new mongoose.Schema({
 
 // Calculate total hours before saving
 timesheetSchema.pre('save', function(next) {
-  this.totalHours = this.entries.reduce((sum, entry) => sum + entry.hours, 0);
+  this.totalNormalHours = this.entries.reduce((sum, entry) => sum + (entry.normalHours || 0), 0);
+  this.totalOTHours = this.entries.reduce((sum, entry) => sum + (entry.otHours || 0), 0);
+  this.totalHours = this.totalNormalHours + this.totalOTHours;
   next();
 });
 

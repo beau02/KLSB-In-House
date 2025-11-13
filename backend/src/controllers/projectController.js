@@ -11,7 +11,6 @@ exports.getAllProjects = async (req, res) => {
     if (status) filter.status = status;
 
     const projects = await Project.find(filter)
-      .populate('managerId', 'firstName lastName email')
       .populate('teamMembers', 'firstName lastName email');
     
     res.json({
@@ -30,7 +29,6 @@ exports.getAllProjects = async (req, res) => {
 exports.getProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('managerId', 'firstName lastName email')
       .populate('teamMembers', 'firstName lastName email');
     
     if (!project) {
@@ -51,7 +49,7 @@ exports.getProject = async (req, res) => {
 // @access  Private/Admin/Manager
 exports.createProject = async (req, res) => {
   try {
-    const { projectCode, projectName, description, startDate, endDate, managerId, budget, teamMembers } = req.body;
+    const { projectCode, projectName, description, startDate, endDate, company, contractor, teamMembers } = req.body;
 
     // Check if project code already exists
     const projectExists = await Project.findOne({ projectCode });
@@ -65,12 +63,10 @@ exports.createProject = async (req, res) => {
       description,
       startDate,
       endDate,
-      managerId,
-      budget,
+      company,
+      contractor,
       teamMembers
     });
-
-    await project.populate('managerId', 'firstName lastName email');
 
     res.status(201).json({
       success: true,
@@ -92,7 +88,7 @@ exports.updateProject = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const { projectName, description, startDate, endDate, status, managerId, budget, teamMembers } = req.body;
+    const { projectName, description, startDate, endDate, status, company, contractor, teamMembers } = req.body;
 
     // Update fields
     if (projectName) project.projectName = projectName;
@@ -100,12 +96,11 @@ exports.updateProject = async (req, res) => {
     if (startDate) project.startDate = startDate;
     if (endDate) project.endDate = endDate;
     if (status) project.status = status;
-    if (managerId) project.managerId = managerId;
-    if (budget !== undefined) project.budget = budget;
+    if (company) project.company = company;
+    if (contractor) project.contractor = contractor;
     if (teamMembers) project.teamMembers = teamMembers;
 
     await project.save();
-    await project.populate('managerId', 'firstName lastName email');
 
     res.json({
       success: true,

@@ -23,11 +23,10 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import moment from 'moment';
-import { projectService, userService } from '../services';
+import { projectService } from '../services';
 
 export const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -37,8 +36,8 @@ export const ProjectsPage = () => {
     description: '',
     startDate: '',
     endDate: '',
-    managerId: '',
-    budget: 0,
+    company: '',
+    contractor: '',
     status: 'active'
   });
 
@@ -48,12 +47,8 @@ export const ProjectsPage = () => {
 
   const loadData = async () => {
     try {
-      const [projectsRes, usersRes] = await Promise.all([
-        projectService.getAll(),
-        userService.getAll({ role: 'manager' })
-      ]);
+      const projectsRes = await projectService.getAll();
       setProjects(projectsRes.projects || []);
-      setUsers(usersRes.users || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -70,8 +65,8 @@ export const ProjectsPage = () => {
         description: project.description || '',
         startDate: moment(project.startDate).format('YYYY-MM-DD'),
         endDate: project.endDate ? moment(project.endDate).format('YYYY-MM-DD') : '',
-        managerId: project.managerId._id,
-        budget: project.budget || 0,
+        company: project.company || '',
+        contractor: project.contractor || '',
         status: project.status
       });
     } else {
@@ -82,8 +77,8 @@ export const ProjectsPage = () => {
         description: '',
         startDate: '',
         endDate: '',
-        managerId: '',
-        budget: 0,
+        company: '',
+        contractor: '',
         status: 'active'
       });
     }
@@ -157,12 +152,13 @@ export const ProjectsPage = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Project Code</TableCell>
-              <TableCell>Project Name</TableCell>
-              <TableCell>Manager</TableCell>
-              <TableCell>Start Date</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+            <TableCell>Project Code</TableCell>
+            <TableCell>Project Name</TableCell>
+            <TableCell>Company</TableCell>
+            <TableCell>Contractor</TableCell>
+            <TableCell>Start Date</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -177,9 +173,8 @@ export const ProjectsPage = () => {
                 <TableRow key={project._id}>
                   <TableCell>{project.projectCode}</TableCell>
                   <TableCell>{project.projectName}</TableCell>
-                  <TableCell>
-                    {project.managerId?.firstName} {project.managerId?.lastName}
-                  </TableCell>
+                  <TableCell>{project.company || '-'}</TableCell>
+                  <TableCell>{project.contractor || '-'}</TableCell>
                   <TableCell>{moment(project.startDate).format('MMM DD, YYYY')}</TableCell>
                   <TableCell>{getStatusChip(project.status)}</TableCell>
                   <TableCell>
@@ -229,20 +224,19 @@ export const ProjectsPage = () => {
             margin="normal"
           />
           <TextField
-            select
             fullWidth
-            label="Project Manager"
-            value={formData.managerId}
-            onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+            label="Company"
+            value={formData.company}
+            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
             margin="normal"
-            required
-          >
-            {users.map((user) => (
-              <MenuItem key={user._id} value={user._id}>
-                {user.firstName} {user.lastName}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
+          <TextField
+            fullWidth
+            label="Contractor"
+            value={formData.contractor}
+            onChange={(e) => setFormData({ ...formData, contractor: e.target.value })}
+            margin="normal"
+          />
           <TextField
             fullWidth
             type="date"
@@ -261,14 +255,6 @@ export const ProjectsPage = () => {
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
             margin="normal"
             InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            fullWidth
-            type="number"
-            label="Budget"
-            value={formData.budget}
-            onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-            margin="normal"
           />
           <TextField
             select

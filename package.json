@@ -1,0 +1,19 @@
+{
+  "name": "klsb-timesheet-system",
+  "version": "1.0.0",
+  "description": "Timesheet Management System",
+  "scripts": {
+    "dev": ".\\run-dev.bat",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev"
+  },
+  "keywords": [
+    "timesheet",
+    "management"
+  ],
+  "author": "KLSB",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -78,6 +78,9 @@ export const TimesheetsScreen = ({ navigation }) => {
                   {timesheet.projectId?.projectName || 'N/A'}
                 </Text>
                 <Text variant="bodySmall" style={styles.hours}>
+                  Normal: {timesheet.totalNormalHours || 0} hrs | OT: {timesheet.totalOTHours || 0} hrs
+                </Text>
+                <Text variant="bodySmall" style={styles.totalHours}>
                   Total Hours: {timesheet.totalHours} hrs
                 </Text>
                 {timesheet.submittedAt && (
@@ -145,6 +148,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   hours: {
+    marginTop: 4,
+    color: '#666',
+  },
+  totalHours: {
     marginTop: 4,
     fontWeight: 'bold',
   },

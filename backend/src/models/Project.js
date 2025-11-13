@@ -29,14 +29,13 @@ const projectSchema = new mongoose.Schema({
     enum: ['active', 'completed', 'on-hold', 'cancelled'],
     default: 'active'
   },
-  managerId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Project manager is required']
+  company: {
+    type: String,
+    trim: true
   },
-  budget: {
-    type: Number,
-    default: 0
+  contractor: {
+    type: String,
+    trim: true
   },
   teamMembers: [{
     type: mongoose.Schema.Types.ObjectId,
