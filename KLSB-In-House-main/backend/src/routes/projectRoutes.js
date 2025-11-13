@@ -1,0 +1,25 @@
+const express = require('express');
+const {
+  getAllProjects,
+  getProject,
+  createProject,
+  updateProject,
+  deleteProject
+} = require('../controllers/projectController');
+const { auth, authorize } = require('../middleware/auth');
+
+const router = express.Router();
+
+// All routes require authentication
+router.use(auth);
+
+router.route('/')
+  .get(getAllProjects)
+  .post(authorize('admin', 'manager'), createProject);
+
+router.route('/:id')
+  .get(getProject)
+  .put(authorize('admin', 'manager'), updateProject)
+  .delete(authorize('admin'), deleteProject);
+
+module.exports = router;

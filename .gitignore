@@ -1,37 +1,47 @@
-# Dependencies
+# Node & package managers
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
 # Build outputs
 dist/
 build/
-*.log
+.web/
+.vite/
 
-# IDE
+# React Native / Expo
+android/
+ios/
+.expo/
+.expo-shared/
+*.keystore
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editors and OS
 .vscode/
 .idea/
-*.swp
-*.swo
+.swp
+.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Expo
-.expo/
-.expo-shared/
+# Logs
+logs
+*.log
 
-# Mobile
+# Mobile / signing / build artifacts
 *.jks
 *.p8
 *.p12
@@ -42,4 +52,5 @@ web-build/
 
 # Misc
 coverage/
+coverage/*
 .cache/
