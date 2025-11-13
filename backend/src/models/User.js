@@ -25,6 +25,16 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Last name is required'],
     trim: true
   },
+  employeeNo: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true
+  },
+  designation: {
+    type: String,
+    trim: true
+  },
   role: {
     type: String,
     enum: ['admin', 'manager', 'employee'],
@@ -35,6 +45,10 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   phoneNumber: {
+    type: String,
+    trim: true
+  },
+  contactNo: {
     type: String,
     trim: true
   },

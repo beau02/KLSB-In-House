@@ -49,7 +49,7 @@ exports.getUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, department, phoneNumber } = req.body;
+    const { email, password, firstName, lastName, role, department, phoneNumber, employeeNo, designation, contactNo } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -62,9 +62,12 @@ exports.createUser = async (req, res) => {
       password,
       firstName,
       lastName,
-      role,
+      role: role || 'employee',
       department,
-      phoneNumber
+      phoneNumber,
+      employeeNo,
+      designation,
+      contactNo
     });
 
     res.status(201).json({
@@ -81,7 +84,7 @@ exports.createUser = async (req, res) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res) => {
   try {
-    const { firstName, lastName, role, department, phoneNumber, status } = req.body;
+    const { firstName, lastName, role, department, phoneNumber, status, employeeNo, designation, contactNo, password } = req.body;
 
     const user = await User.findById(req.params.id);
     
@@ -96,6 +99,10 @@ exports.updateUser = async (req, res) => {
     if (department) user.department = department;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (status) user.status = status;
+    if (employeeNo !== undefined) user.employeeNo = employeeNo;
+    if (designation !== undefined) user.designation = designation;
+    if (contactNo !== undefined) user.contactNo = contactNo;
+    if (password) user.password = password;
 
     await user.save();
 

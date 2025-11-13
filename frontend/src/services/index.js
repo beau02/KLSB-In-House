@@ -161,3 +161,10 @@ export const reportService = {
     return response.data;
   }
 };
+
+export const statsService = {
+  getDashboard: async () => {
+    const response = await api.get('/stats/dashboard');
+    return response.data;
+  }
+};

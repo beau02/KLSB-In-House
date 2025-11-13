@@ -9,6 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const timesheetRoutes = require('./routes/timesheetRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const statsRoutes = require('./routes/stats');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/timesheets', timesheetRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

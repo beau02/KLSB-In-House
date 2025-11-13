@@ -1,0 +1,396 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Box,
+  CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  Tabs,
+  Tab
+} from '@mui/material';
+import { Visibility, CheckCircle, Cancel } from '@mui/icons-material';
+import moment from 'moment';
+import { timesheetService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+
+export const ApprovalsPage = () => {
+  const { user } = useAuth();
+  const [timesheets, setTimesheets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedTimesheet, setSelectedTimesheet] = useState(null);
+  const [comments, setComments] = useState('');
+  const [tabValue, setTabValue] = useState(0);
+
+  useEffect(() => {
+    loadTimesheets();
+  }, []);
+
+  const loadTimesheets = async () => {
+    try {
+      const response = await timesheetService.getAll();
+      setTimesheets(response.timesheets || []);
+    } catch (error) {
+      console.error('Error loading timesheets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenDialog = async (timesheet) => {
+    setSelectedTimesheet(timesheet);
+    setComments('');
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setSelectedTimesheet(null);
+    setComments('');
+  };
+
+  const handleApprove = async () => {
+    try {
+      await timesheetService.approve(selectedTimesheet._id, comments);
+      handleCloseDialog();
+      loadTimesheets();
+    } catch (error) {
+      console.error('Error approving timesheet:', error);
+      alert(error.response?.data?.message || 'Error approving timesheet');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!comments.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+    try {
+      await timesheetService.reject(selectedTimesheet._id, comments);
+      handleCloseDialog();
+      loadTimesheets();
+    } catch (error) {
+      console.error('Error rejecting timesheet:', error);
+      alert(error.response?.data?.message || 'Error rejecting timesheet');
+    }
+  };
+
+  const getStatusChip = (status) => {
+    const colors = {
+      draft: 'default',
+      submitted: 'warning',
+      approved: 'success',
+      rejected: 'error'
+    };
+    return <Chip label={status.toUpperCase()} color={colors[status]} size="small" />;
+  };
+
+  const filterTimesheets = () => {
+    switch (tabValue) {
+      case 0: // Pending
+        return timesheets.filter(t => t.status === 'submitted');
+      case 1: // Approved
+        return timesheets.filter(t => t.status === 'approved');
+      case 2: // Rejected
+        return timesheets.filter(t => t.status === 'rejected');
+      default:
+        return timesheets;
+    }
+  };
+
+  const filteredTimesheets = filterTimesheets();
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+          Timesheet Approvals
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Review and approve employee timesheets
+        </Typography>
+      </Box>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{
+            '& .MuiTab-root': {
+              fontWeight: 600,
+              '&.Mui-selected': {
+                color: '#030C69',
+              },
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#030C69',
+            },
+          }}
+        >
+          <Tab label={`Pending (${timesheets.filter(t => t.status === 'submitted').length})`} />
+          <Tab label={`Approved (${timesheets.filter(t => t.status === 'approved').length})`} />
+          <Tab label={`Rejected (${timesheets.filter(t => t.status === 'rejected').length})`} />
+        </Tabs>
+      </Box>
+
+      <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
+        <Table sx={{ minWidth: 1000 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Employee</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Period</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Project</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Normal Hours</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>OT Hours</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Total Hours</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Status</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Submitted Date</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredTimesheets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  No timesheets found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTimesheets.map((timesheet) => (
+                <TableRow key={timesheet._id}>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {timesheet.userId?.firstName} {timesheet.userId?.lastName}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {moment().month(timesheet.month - 1).format('MMMM')} {timesheet.year}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {timesheet.projectId?.projectName || 'N/A'}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {timesheet.totalNormalHours || 0} hrs
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {timesheet.totalOTHours || 0} hrs
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    <strong>{timesheet.totalHours} hrs</strong>
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {getStatusChip(timesheet.status)}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {timesheet.submittedAt
+                      ? moment(timesheet.submittedAt).format('MMM DD, YYYY')
+                      : '-'}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenDialog(timesheet)}
+                      color="primary"
+                    >
+                      <Visibility />
+                    </IconButton>
+                    {timesheet.status === 'submitted' && (
+                      <>
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => {
+                            setSelectedTimesheet(timesheet);
+                            setComments('');
+                            handleApprove();
+                          }}
+                        >
+                          <CheckCircle />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleOpenDialog(timesheet)}
+                        >
+                          <Cancel />
+                        </IconButton>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          Timesheet Details - {selectedTimesheet?.userId?.firstName} {selectedTimesheet?.userId?.lastName}
+        </DialogTitle>
+        <DialogContent>
+          {selectedTimesheet && (
+            <>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Period
+                  </Typography>
+                  <Typography variant="body1">
+                    {moment().month(selectedTimesheet.month - 1).format('MMMM')} {selectedTimesheet.year}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Project
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedTimesheet.projectId?.projectName || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Status
+                  </Typography>
+                  {getStatusChip(selectedTimesheet.status)}
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Submitted
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedTimesheet.submittedAt
+                      ? moment(selectedTimesheet.submittedAt).format('MMM DD, YYYY')
+                      : '-'}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              <Card variant="outlined" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Daily Hours Entry
+                  </Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell><strong>Date</strong></TableCell>
+                          <TableCell><strong>Day</strong></TableCell>
+                          <TableCell><strong>Normal Hours</strong></TableCell>
+                          <TableCell><strong>OT Hours</strong></TableCell>
+                          <TableCell><strong>Description</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedTimesheet.entries?.map((entry, index) => {
+                          const entryDate = moment(entry.date);
+                          const isWeekend = entryDate.day() === 0 || entryDate.day() === 6;
+                          if (entry.normalHours === 0 && entry.otHours === 0) return null;
+                          return (
+                            <TableRow
+                              key={index}
+                              sx={{ backgroundColor: isWeekend ? '#f5f5f5' : 'white' }}
+                            >
+                              <TableCell>{entryDate.format('DD')}</TableCell>
+                              <TableCell>
+                                <Typography
+                                  variant="body2"
+                                  color={isWeekend ? 'error' : 'textPrimary'}
+                                >
+                                  {entryDate.format('ddd')}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{entry.normalHours}</TableCell>
+                              <TableCell>{entry.otHours}</TableCell>
+                              <TableCell>{entry.description || '-'}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <Box sx={{ mt: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={4}>
+                        <Typography variant="h6">
+                          Normal: {selectedTimesheet.totalNormalHours || 0} hrs
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="h6">
+                          OT: {selectedTimesheet.totalOTHours || 0} hrs
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="h6">
+                          Total: {selectedTimesheet.totalHours} hrs
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {selectedTimesheet.status === 'submitted' && (
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Comments"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Add comments (required for rejection)"
+                  margin="normal"
+                />
+              )}
+
+              {selectedTimesheet.comments && (
+                <Box sx={{ mt: 2, p: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                  <Typography variant="subtitle2">Comments:</Typography>
+                  <Typography variant="body2">{selectedTimesheet.comments}</Typography>
+                </Box>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Close</Button>
+          {selectedTimesheet?.status === 'submitted' && (
+            <>
+              <Button onClick={handleReject} color="error" variant="outlined">
+                Reject
+              </Button>
+              <Button onClick={handleApprove} color="success" variant="contained">
+                Approve
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+};

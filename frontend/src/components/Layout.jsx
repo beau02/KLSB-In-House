@@ -22,6 +22,7 @@ import {
   People,
   Work,
   Assessment,
+  BarChart,
   ExitToApp
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -31,13 +32,18 @@ const drawerWidth = 240;
 
 export const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const { user, logout, isManager } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setSidebarOpen(!sidebarOpen);
+    }
   };
 
   const handleLogout = () => {
@@ -49,25 +55,34 @@ export const Layout = ({ children }) => {
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'My Timesheets', icon: <Assignment />, path: '/timesheets' },
     { text: 'Projects', icon: <Work />, path: '/projects' },
+    { text: 'Staff Management', icon: <People />, path: '/staff' },
   ];
 
   if (isManager) {
     menuItems.push(
-      { text: 'Staff Management', icon: <People />, path: '/users' },
       { text: 'Approvals', icon: <Assessment />, path: '/approvals' },
-      { text: 'Reports', icon: <Assessment />, path: '/reports' }
+      { text: 'Reports', icon: <BarChart />, path: '/reports' }
     );
   }
 
   const drawer = (
-    <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap>
-          Timesheet
-        </Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar sx={{ 
+        background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)', 
+        minHeight: '70px !important',
+        color: 'white',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+            KLSB
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.9, lineHeight: 1 }}>
+            Timesheet System
+          </Typography>
+        </Box>
       </Toolbar>
-      <Divider />
-      <List>
+      <List sx={{ px: 1, py: 2 }}>
         {menuItems.map((item) => (
           <ListItem
             button
@@ -76,47 +91,92 @@ export const Layout = ({ children }) => {
               navigate(item.path);
               if (isMobile) setMobileOpen(false);
             }}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              '&:hover': {
+                backgroundColor: 'rgba(3, 12, 105, 0.08)',
+              },
+              ...(window.location.pathname === item.path && {
+                backgroundColor: 'rgba(3, 12, 105, 0.12)',
+                '& .MuiListItemIcon-root': {
+                  color: '#030C69',
+                },
+                '& .MuiListItemText-primary': {
+                  color: '#030C69',
+                  fontWeight: 600,
+                },
+              }),
+            }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
       </List>
-    </div>
+    </Box>
   );
 
   return (
     <Box sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
+          ml: { xs: 0, md: sidebarOpen ? `${drawerWidth}px` : 0 },
+          background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          transition: 'all 0.3s ease',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: '70px !important' }}>
           <IconButton
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Timesheet Management System
+          <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+            KLSB
           </Typography>
-          <Typography variant="body1" sx={{ mr: 2 }}>
-            {user?.firstName} {user?.lastName}
-          </Typography>
-          <Button color="inherit" onClick={handleLogout} startIcon={<ExitToApp />}>
-            Logout
-          </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            padding: '6px 12px',
+            borderRadius: 2,
+            flexShrink: 0,
+          }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+              {user?.firstName} {user?.lastName}
+            </Typography>
+            <Button 
+              color="inherit" 
+              onClick={handleLogout} 
+              startIcon={<ExitToApp />}
+              size="small"
+              sx={{ 
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                whiteSpace: 'nowrap',
+                minWidth: 'auto',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                },
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+        sx={{ width: { xs: 0, md: drawerWidth }, flexShrink: { md: 0 } }}
       >
         <Drawer
           variant="temporary"
@@ -134,7 +194,13 @@ export const Layout = ({ children }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              borderRight: 'none',
+              transform: sidebarOpen ? 'translateX(0)' : `translateX(-${drawerWidth}px)`,
+              transition: 'transform 0.3s ease',
+            },
           }}
           open
         >
@@ -146,8 +212,12 @@ export const Layout = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: 8
+          width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
+          ml: { xs: 0, md: sidebarOpen ? 0 : `-${drawerWidth}px` },
+          mt: '86px',
+          backgroundColor: '#f5f7fa',
+          minHeight: '100vh',
+          transition: 'all 0.3s ease',
         }}
       >
         {children}

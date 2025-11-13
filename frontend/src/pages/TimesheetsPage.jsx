@@ -38,6 +38,7 @@ export const TimesheetsPage = () => {
   const [selectedTimesheet, setSelectedTimesheet] = useState(null);
   const [formData, setFormData] = useState({
     projectId: '',
+    disciplineCode: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     entries: []
@@ -74,6 +75,7 @@ export const TimesheetsPage = () => {
       }));
       setFormData({
         projectId: timesheet.projectId._id,
+        disciplineCode: timesheet.disciplineCode || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
@@ -84,6 +86,7 @@ export const TimesheetsPage = () => {
       const currentYear = new Date().getFullYear();
       setFormData({
         projectId: '',
+        disciplineCode: '',
         month: currentMonth,
         year: currentYear,
         entries: generateEmptyEntries(currentMonth, currentYear)
@@ -91,6 +94,23 @@ export const TimesheetsPage = () => {
     }
     setDialogOpen(true);
   };
+
+  const disciplineCodes = ['PMT', 'ADM', 'PRS', 'CIV', 'STR', 'PPG', 'ARC', 'MEC', 'ELE', 'INS', 'TEL', 'GEN', 'DCS'];
+
+  const activityDescriptions = [
+    'Project - Management and Report',
+    'Project - Model Review',
+    'Admin - Project system initial setup',
+    'Admin - Maintenance, customization and report',
+    'Admin - Spec Creation',
+    'Designer and Drafter - 3D Modeling and Design',
+    'Designer and Drafter - 2D Drawing and Layout',
+    'Checker - 3D Modeling and Design',
+    'Checker - 2D Drawing and Layout',
+    'Engineer - Calculation and report',
+    'Engineer - Others',
+    'Others'
+  ];
 
   const generateEmptyEntries = (month, year) => {
     const daysInMonth = moment(`${year}-${month}`, 'YYYY-M').daysInMonth();
@@ -119,7 +139,19 @@ export const TimesheetsPage = () => {
 
   const handleEntryChange = (index, field, value) => {
     const newEntries = [...formData.entries];
-    newEntries[index] = { ...newEntries[index], [field]: value };
+    
+    // Only process as number for hour fields
+    if (field === 'normalHours' || field === 'otHours') {
+      let numValue = value === '' ? '' : parseFloat(value);
+      if (numValue === '' || isNaN(numValue)) {
+        numValue = '';
+      }
+      newEntries[index] = { ...newEntries[index], [field]: numValue };
+    } else {
+      // For description and other text fields, use value directly
+      newEntries[index] = { ...newEntries[index], [field]: value };
+    }
+    
     setFormData({ ...formData, entries: newEntries });
   };
 
@@ -172,9 +204,16 @@ export const TimesheetsPage = () => {
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">My Timesheets</Typography>
+    <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+          My Timesheets
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Track your daily hours for each project
+        </Typography>
+      </Box>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -252,7 +291,7 @@ export const TimesheetsPage = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 select
                 fullWidth
@@ -270,7 +309,25 @@ export const TimesheetsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
+              <TextField
+                select
+                fullWidth
+                label="Discipline Code"
+                value={formData.disciplineCode}
+                onChange={(e) => setFormData({ ...formData, disciplineCode: e.target.value })}
+                margin="normal"
+                disabled={!!selectedTimesheet}
+                required
+              >
+                {disciplineCodes.map((code) => (
+                  <MenuItem key={code} value={code}>
+                    {code}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={3}>
               <TextField
                 select
                 fullWidth
@@ -288,7 +345,7 @@ export const TimesheetsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 type="number"
@@ -344,8 +401,9 @@ export const TimesheetsPage = () => {
                               <TextField
                                 type="number"
                                 size="small"
-                                value={entry.normalHours}
-                                onChange={(e) => handleEntryChange(index, 'normalHours', parseFloat(e.target.value) || 0)}
+                                value={entry.normalHours || ''}
+                                onChange={(e) => handleEntryChange(index, 'normalHours', e.target.value)}
+                                onFocus={(e) => e.target.select()}
                                 inputProps={{ min: 0, max: 24, step: 0.5 }}
                                 disabled={selectedTimesheet?.status === 'approved'}
                                 sx={{ width: '100px' }}
@@ -355,8 +413,9 @@ export const TimesheetsPage = () => {
                               <TextField
                                 type="number"
                                 size="small"
-                                value={entry.otHours}
-                                onChange={(e) => handleEntryChange(index, 'otHours', parseFloat(e.target.value) || 0)}
+                                value={entry.otHours || ''}
+                                onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
+                                onFocus={(e) => e.target.select()}
                                 inputProps={{ min: 0, max: 24, step: 0.5 }}
                                 disabled={selectedTimesheet?.status === 'approved'}
                                 sx={{ width: '100px' }}
@@ -364,13 +423,20 @@ export const TimesheetsPage = () => {
                             </TableCell>
                             <TableCell>
                               <TextField
+                                select
                                 size="small"
                                 fullWidth
                                 value={entry.description}
                                 onChange={(e) => handleEntryChange(index, 'description', e.target.value)}
-                                placeholder="Work description"
                                 disabled={selectedTimesheet?.status === 'approved'}
-                              />
+                              >
+                                <MenuItem value="">-</MenuItem>
+                                {activityDescriptions.map((desc) => (
+                                  <MenuItem key={desc} value={desc}>
+                                    {desc}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
                             </TableCell>
                           </TableRow>
                         );

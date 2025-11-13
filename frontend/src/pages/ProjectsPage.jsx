@@ -136,9 +136,16 @@ export const ProjectsPage = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+          Projects
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Manage company and contractor projects
+        </Typography>
+      </Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Projects</Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
