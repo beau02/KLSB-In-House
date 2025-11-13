@@ -46,7 +46,8 @@ export const DashboardPage = () => {
 
       const timesheets = timesheetsRes.timesheets || [];
       setStats({
-        totalTimesheets: timesheets.length,
+        // Show total timesheets as the number of approved timesheets
+        totalTimesheets: timesheets.filter(t => t.status === 'approved').length,
         pendingTimesheets: timesheets.filter(t => t.status === 'submitted').length,
         approvedTimesheets: timesheets.filter(t => t.status === 'approved').length,
         activeProjects: projectsRes.count || 0,

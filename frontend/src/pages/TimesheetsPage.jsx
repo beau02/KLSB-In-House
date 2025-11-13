@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Visibility, Send } from '@mui/icons-material';
 import moment from 'moment';
+import api from '../services/api';
 import { timesheetService, projectService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -46,15 +47,21 @@ export const TimesheetsPage = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const loadData = async () => {
     try {
-      const [timesheetsRes, projectsRes] = await Promise.all([
-        timesheetService.getAll(),
-        projectService.getAll({ status: 'active' })
-      ]);
-      setTimesheets(timesheetsRes.timesheets || []);
+      const projectsRes = await projectService.getAll({ status: 'active' });
+
+      let timesheetsRes = { timesheets: [] };
+      // Always fetch only the current user's timesheets
+      if (user) {
+        const userId = user._id || user.id;
+        timesheetsRes = await timesheetService.getByUser(userId);
+      }
+
+      const fetchedTimesheets = timesheetsRes.timesheets || timesheetsRes.timesheet || [];
+      setTimesheets(fetchedTimesheets);
       setProjects(projectsRes.projects || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -63,7 +70,7 @@ export const TimesheetsPage = () => {
     }
   };
 
-  const handleOpenDialog = (timesheet = null) => {
+  const handleOpenDialog = async (timesheet = null) => {
     if (timesheet) {
       setSelectedTimesheet(timesheet);
       // Migrate old entries to new format if needed
@@ -71,6 +78,10 @@ export const TimesheetsPage = () => {
         date: entry.date,
         normalHours: entry.normalHours !== undefined ? entry.normalHours : (entry.hours || 0),
         otHours: entry.otHours !== undefined ? entry.otHours : 0,
+        // Derive hoursCode from existing data if present
+        hoursCode: entry.hoursCode !== undefined ? entry.hoursCode : (
+          entry.normalHours === 8 ? '8' : (entry.normalHours === 4 ? '4' : (entry.normalHours === 0 ? '0' : ''))
+        ),
         description: entry.description || ''
       }));
       setFormData({
@@ -84,15 +95,78 @@ export const TimesheetsPage = () => {
       setSelectedTimesheet(null);
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
+      let entries = generateEmptyEntries(currentMonth, currentYear);
+      // try to fetch public holidays for the month and mark entries
+      await applyPublicHolidays(entries, currentYear, currentMonth);
+
       setFormData({
         projectId: '',
         disciplineCode: '',
         month: currentMonth,
         year: currentYear,
-        entries: generateEmptyEntries(currentMonth, currentYear)
+        entries
       });
     }
     setDialogOpen(true);
+  };
+
+  const [publicHolidays, setPublicHolidays] = useState([]);
+
+  const fetchPublicHolidays = async (year, month) => {
+    // Try backend endpoint first. If it doesn't exist or returns nothing, fallback to Nager.Date public API for Malaysia.
+    try {
+      const resp = await api.get('/holidays', { params: { year, month } });
+      const holidays = resp.data.holidays || resp.data || [];
+      if (holidays && holidays.length > 0) {
+        setPublicHolidays(holidays);
+        return holidays;
+      }
+    } catch (err) {
+      // ignore and fallback to public API
+    }
+
+    try {
+      // Nager.Date public holidays API (country code MY for Malaysia)
+      const nagerUrl = `https://date.nager.at/api/v3/PublicHolidays/${year}/MY`;
+      const resp2 = await fetch(nagerUrl);
+      if (!resp2.ok) throw new Error('Nager API error');
+      const nagerData = await resp2.json();
+      // nagerData is an array of { date: 'YYYY-MM-DD', localName, name, ... }
+      const holidays = nagerData.map(h => ({ date: h.date, name: h.name || h.localName }));
+      // Filter by month if provided
+      const filtered = holidays.filter(h => {
+        if (!month) return true;
+        const m = parseInt(h.date.split('-')[1], 10);
+        return m === parseInt(month, 10);
+      });
+      setPublicHolidays(filtered);
+      return filtered;
+    } catch (err) {
+      console.warn('Failed to fetch public holidays from backend and Nager.Date:', err);
+      setPublicHolidays([]);
+      return [];
+    }
+  };
+
+  const applyPublicHolidays = async (entries, year, month) => {
+    // fetch holidays then modify entries in-place
+    const holidays = await fetchPublicHolidays(year, month);
+    // normalize holidays to set of date strings 'YYYY-MM-DD' with optional name
+    const holidayMap = {};
+    holidays.forEach(h => {
+      if (!h) return;
+      if (typeof h === 'string') holidayMap[h] = 'Public Holiday';
+      else if (h.date) holidayMap[h.date] = h.name || 'Public Holiday';
+    });
+
+    entries.forEach((entry, idx) => {
+      if (holidayMap[entry.date]) {
+        entry.hoursCode = 'PH';
+        entry.normalHours = 0;
+        // only overwrite description if empty
+        if (!entry.description || entry.description === '') entry.description = holidayMap[entry.date];
+      }
+    });
   };
 
   const disciplineCodes = ['PMT', 'ADM', 'PRS', 'CIV', 'STR', 'PPG', 'ARC', 'MEC', 'ELE', 'INS', 'TEL', 'GEN', 'DCS'];
@@ -112,6 +186,20 @@ export const TimesheetsPage = () => {
     'Others'
   ];
 
+  const hoursLegend = [
+    { value: '0', label: '0 - Non chargeable' },
+    { value: '8', label: '8 - Full day work' },
+    { value: '4', label: '4 - Half day work' },
+    { value: 'AL', label: 'AL - Annual leave' },
+    { value: 'MC', label: 'MC - Medical leave' },
+    { value: 'UL', label: 'UL - Unpaid leave' },
+    { value: 'HL', label: 'HL - Hosp. leave' },
+    { value: 'PL', label: 'PL - Paternity leave' },
+    { value: 'ML', label: 'ML - Maternity leave' },
+    { value: 'PH', label: 'PH - Public Holiday' },
+    { value: 'CL', label: 'CL - Compassionate leave' }
+  ];
+
   const generateEmptyEntries = (month, year) => {
     const daysInMonth = moment(`${year}-${month}`, 'YYYY-M').daysInMonth();
     const entries = [];
@@ -120,6 +208,7 @@ export const TimesheetsPage = () => {
         date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         normalHours: 0,
         otHours: 0,
+        hoursCode: '0',
         description: ''
       });
     }
@@ -147,6 +236,16 @@ export const TimesheetsPage = () => {
         numValue = '';
       }
       newEntries[index] = { ...newEntries[index], [field]: numValue };
+    } else if (field === 'hoursCode') {
+      // Map hoursCode to normalHours when applicable
+      const code = value;
+      let mappedHours = newEntries[index].normalHours || 0;
+      if (code === '8') mappedHours = 8;
+      else if (code === '4') mappedHours = 4;
+      else if (code === '0') mappedHours = 0;
+      else mappedHours = 0; // leave codes and others default to 0
+
+      newEntries[index] = { ...newEntries[index], hoursCode: code, normalHours: mappedHours };
     } else {
       // For description and other text fields, use value directly
       newEntries[index] = { ...newEntries[index], [field]: value };
@@ -399,15 +498,19 @@ export const TimesheetsPage = () => {
                             </TableCell>
                             <TableCell>
                               <TextField
-                                type="number"
+                                select
                                 size="small"
-                                value={entry.normalHours || ''}
-                                onChange={(e) => handleEntryChange(index, 'normalHours', e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                                inputProps={{ min: 0, max: 24, step: 0.5 }}
+                                value={entry.hoursCode || '0'}
+                                onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
                                 disabled={selectedTimesheet?.status === 'approved'}
-                                sx={{ width: '100px' }}
-                              />
+                                sx={{ width: '180px' }}
+                              >
+                                {hoursLegend.map(h => (
+                                  <MenuItem key={h.value} value={h.value}>
+                                    {h.label}
+                                  </MenuItem>
+                                ))}
+                              </TextField>
                             </TableCell>
                             <TableCell>
                               <TextField

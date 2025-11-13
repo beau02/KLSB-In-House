@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { Download } from '@mui/icons-material';
 import moment from 'moment';
-import { timesheetService, projectService } from '../services';
+import { timesheetService, projectService, userService } from '../services';
 
 export const ReportsPage = () => {
   const [timesheets, setTimesheets] = useState([]);
@@ -50,18 +50,50 @@ export const ReportsPage = () => {
   const loadTimesheets = async () => {
     setLoading(true);
     try {
-      const response = await timesheetService.getAll();
-      let approvedTimesheets = (response.timesheets || []).filter(
-        t => t.status === 'approved' && 
-             t.month === selectedMonth && 
-             t.year === selectedYear
-      );
-      
-      if (selectedProject !== 'all') {
-        approvedTimesheets = approvedTimesheets.filter(t => t.projectId?._id === selectedProject);
+      // Coerce selectors to numbers for server params
+      const monthNum = parseInt(selectedMonth, 10);
+      const yearNum = parseInt(selectedYear, 10);
+
+      const params = { status: 'approved', month: monthNum, year: yearNum };
+      if (selectedProject && selectedProject !== 'all') params.projectId = selectedProject;
+
+      // Let backend do filtering to avoid client-side mismatch
+      const response = await timesheetService.getAll(params);
+      const fetched = response.timesheets || [];
+      // If user details (employeeNo/department) are missing, fetch user records
+      const timesheetsWithUserInfo = [...fetched];
+      const missingUserIds = [];
+      fetched.forEach(t => {
+        const uid = t.userId && (typeof t.userId === 'object' ? (t.userId._id || t.userId) : t.userId);
+        if (uid && (!t.userId?.employeeNo || !t.userId?.department)) missingUserIds.push(uid);
+      });
+
+      const uniqueUserIds = Array.from(new Set(missingUserIds));
+      if (uniqueUserIds.length > 0) {
+        try {
+          const userPromises = uniqueUserIds.map(id => userService.getById(id));
+          const users = await Promise.all(userPromises);
+          const userMap = {};
+          users.forEach(u => {
+            if (u && u.user) userMap[u.user._id || u.user.id || u.user._id] = u.user;
+            else if (u && u._id) userMap[u._id] = u;
+          });
+
+          timesheetsWithUserInfo.forEach((t, idx) => {
+            const uid = t.userId && (typeof t.userId === 'object' ? (t.userId._id || t.userId) : t.userId);
+            const userRecord = userMap[uid];
+            if (userRecord) {
+              // ensure userId is object with fields for display
+              t.userId = { ...(typeof t.userId === 'object' ? t.userId : {}), ...userRecord };
+              timesheetsWithUserInfo[idx] = t;
+            }
+          });
+        } catch (err) {
+          console.warn('Error fetching missing user details for reports:', err);
+        }
       }
-      
-      setTimesheets(approvedTimesheets);
+
+      setTimesheets(timesheetsWithUserInfo);
     } catch (error) {
       console.error('Error loading timesheets:', error);
     } finally {

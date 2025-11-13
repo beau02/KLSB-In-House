@@ -66,9 +66,15 @@ export const ApprovalsPage = () => {
     setComments('');
   };
 
-  const handleApprove = async () => {
+  const handleApprove = async (timesheetParam) => {
     try {
-      await timesheetService.approve(selectedTimesheet._id, comments);
+      const target = timesheetParam || selectedTimesheet;
+      const payloadComments = timesheetParam ? '' : comments;
+      if (!target) {
+        alert('No timesheet selected');
+        return;
+      }
+      await timesheetService.approve(target._id, payloadComments);
       handleCloseDialog();
       loadTimesheets();
     } catch (error) {
@@ -222,11 +228,7 @@ export const ApprovalsPage = () => {
                         <IconButton
                           size="small"
                           color="success"
-                          onClick={() => {
-                            setSelectedTimesheet(timesheet);
-                            setComments('');
-                            handleApprove();
-                          }}
+                          onClick={() => handleApprove(timesheet)}
                         >
                           <CheckCircle />
                         </IconButton>
