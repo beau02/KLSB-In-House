@@ -156,7 +156,7 @@ export const TimesheetsPage = () => {
     holidays.forEach(h => {
       if (!h) return;
       if (typeof h === 'string') holidayMap[h] = 'Public Holiday';
-      else if (h.date) holidayMap[h.date] = h.name || 'Public Holiday';
+      else if (h.date) holidayMap[h.date] = 'Public Holiday';
     });
 
     entries.forEach((entry, idx) => {
@@ -183,6 +183,7 @@ export const TimesheetsPage = () => {
     'Checker - 2D Drawing and Layout',
     'Engineer - Calculation and report',
     'Engineer - Others',
+    'Public Holiday',
     'Others'
   ];
 
@@ -246,6 +247,11 @@ export const TimesheetsPage = () => {
       else mappedHours = 0; // leave codes and others default to 0
 
       newEntries[index] = { ...newEntries[index], hoursCode: code, normalHours: mappedHours };
+      
+      // Auto-set description for Public Holiday (PH)
+      if (code === 'PH') {
+        newEntries[index].description = 'Public Holiday';
+      }
     } else {
       // For description and other text fields, use value directly
       newEntries[index] = { ...newEntries[index], [field]: value };

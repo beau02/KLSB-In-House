@@ -12,7 +12,7 @@ import {
   Link
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { userService } from '../services';
+import { authService } from '../services';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -55,10 +55,10 @@ export const RegisterPage = () => {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      await userService.create(registerData);
+      await authService.register(registerData);
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
+        navigate('/');
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -85,7 +85,7 @@ export const RegisterPage = () => {
               py: 2,
             }}
           >
-            Registration successful! Redirecting to login...
+            Registration successful! Redirecting to dashboard...
           </Alert>
         </Container>
       </Box>
