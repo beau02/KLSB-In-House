@@ -138,3 +138,25 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Permanently delete user
+// @route   DELETE /api/users/:id/permanent
+// @access  Private/Admin
+exports.permanentDeleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'User permanently deleted'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

@@ -120,14 +120,32 @@ export const StaffManagementPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
-      try {
-        await userService.delete(id);
-        loadStaff();
-      } catch (error) {
-        console.error('Error deleting staff:', error);
-        alert(error.response?.data?.message || 'Error deleting staff member');
+  const handleDelete = async (staffMember) => {
+    const isInactive = staffMember.status === 'inactive';
+    
+    if (isInactive) {
+      // Second click - permanent delete
+      if (window.confirm('⚠️ WARNING: This will PERMANENTLY delete this staff member and cannot be undone. Are you sure?')) {
+        try {
+          await userService.permanentDelete(staffMember._id);
+          alert('Staff member permanently deleted');
+          loadStaff();
+        } catch (error) {
+          console.error('Error permanently deleting staff:', error);
+          alert(error.response?.data?.message || 'Error permanently deleting staff member');
+        }
+      }
+    } else {
+      // First click - set to inactive
+      if (window.confirm('This will deactivate the staff member. Click delete again to permanently remove.')) {
+        try {
+          await userService.delete(staffMember._id);
+          alert('Staff member deactivated');
+          loadStaff();
+        } catch (error) {
+          console.error('Error deactivating staff:', error);
+          alert(error.response?.data?.message || 'Error deactivating staff member');
+        }
       }
     }
   };
@@ -219,7 +237,12 @@ export const StaffManagementPage = () => {
                       <IconButton size="small" onClick={() => handleOpenDialog(member)}>
                         <Edit />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDelete(member._id)}>
+                      <IconButton 
+                        size="small" 
+                        color={member.status === 'inactive' ? 'error' : 'warning'}
+                        onClick={() => handleDelete(member)}
+                        title={member.status === 'inactive' ? 'Permanently Delete' : 'Deactivate'}
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>

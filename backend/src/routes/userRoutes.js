@@ -4,7 +4,8 @@ const {
   getUser,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  permanentDeleteUser
 } = require('../controllers/userController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -18,8 +19,13 @@ router.route('/')
   .post(authorize('admin'), createUser);
 
 router.route('/:id')
-  .get(getUser)
+  .get(authorize('admin', 'manager'), getUser)
   .put(authorize('admin'), updateUser)
   .delete(authorize('admin'), deleteUser);
+
+router.route('/:id/permanent')
+  .delete(authorize('admin'), permanentDeleteUser);
+
+module.exports = router;
 
 module.exports = router;

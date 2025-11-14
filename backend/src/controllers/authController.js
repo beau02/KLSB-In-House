@@ -13,12 +13,20 @@ const generateToken = (id) => {
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, department } = req.body;
+    const { email, password, firstName, lastName, role, department, employeeNo, designation, contactNo } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Check if employeeNo is provided and already exists
+    if (employeeNo) {
+      const employeeExists = await User.findOne({ employeeNo });
+      if (employeeExists) {
+        return res.status(400).json({ message: 'Employee number already exists' });
+      }
     }
 
     // Create user
@@ -28,7 +36,10 @@ exports.register = async (req, res) => {
       firstName,
       lastName,
       role: role || 'employee',
-      department
+      department,
+      employeeNo,
+      designation,
+      contactNo
     });
 
     // Generate token
@@ -42,7 +53,11 @@ exports.register = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role
+        role: user.role,
+        employeeNo: user.employeeNo,
+        designation: user.designation,
+        contactNo: user.contactNo,
+        department: user.department
       }
     });
   } catch (error) {

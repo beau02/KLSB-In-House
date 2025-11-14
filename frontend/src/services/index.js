@@ -59,6 +59,11 @@ export const userService = {
   delete: async (id) => {
     const response = await api.delete(`/users/${id}`);
     return response.data;
+  },
+
+  permanentDelete: async (id) => {
+    const response = await api.delete(`/users/${id}/permanent`);
+    return response.data;
   }
 };
 
