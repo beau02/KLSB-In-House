@@ -273,6 +273,14 @@ export const ApprovalsPage = () => {
                     {selectedTimesheet.projectId?.projectName || 'N/A'}
                   </Typography>
                 </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Discipline
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedTimesheet.disciplineCode || '-'}
+                    </Typography>
+                  </Grid>
                 <Grid item xs={12} md={3}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Status

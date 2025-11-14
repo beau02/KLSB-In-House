@@ -108,7 +108,7 @@ exports.getTimesheetsByProject = async (req, res) => {
 // @access  Private
 exports.createTimesheet = async (req, res) => {
   try {
-    const { projectId, month, year, entries } = req.body;
+    const { projectId, disciplineCode, month, year, entries } = req.body;
     const userId = req.user.id;
 
     // Check if timesheet already exists for this user/project/month/year
@@ -128,6 +128,7 @@ exports.createTimesheet = async (req, res) => {
     const timesheet = await Timesheet.create({
       userId,
       projectId,
+      disciplineCode,
       month,
       year,
       entries
@@ -165,9 +166,10 @@ exports.updateTimesheet = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update approved timesheet' });
     }
 
-    const { entries, comments } = req.body;
+    const { entries, disciplineCode, comments } = req.body;
 
     if (entries) timesheet.entries = entries;
+    if (disciplineCode !== undefined) timesheet.disciplineCode = disciplineCode;
     if (comments) timesheet.comments = comments;
 
     await timesheet.save();

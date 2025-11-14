@@ -17,6 +17,10 @@ const timesheetEntrySchema = new mongoose.Schema({
     min: 0,
     max: 24
   },
+  hoursCode: {
+    type: String,
+    trim: true
+  },
   description: {
     type: String,
     trim: true
@@ -33,6 +37,10 @@ const timesheetSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
     required: [true, 'Project is required']
+  },
+  disciplineCode: {
+    type: String,
+    trim: true
   },
   month: {
     type: Number,

@@ -86,7 +86,7 @@ export const TimesheetsPage = () => {
       }));
       setFormData({
         projectId: timesheet.projectId._id,
-        disciplineCode: timesheet.disciplineCode || '',
+        disciplineCode: timesheet.disciplineCode || timesheet.discipline || timesheet.discipline_code || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
@@ -267,11 +267,22 @@ export const TimesheetsPage = () => {
 
   const handleSubmit = async () => {
     try {
+      // Log outgoing payload to help debugging disciplineCode not being saved
+      // Prepare payload with multiple possible discipline keys to support different backend field names
+      const payload = {
+        ...formData,
+        disciplineCode: formData.disciplineCode,
+        discipline: formData.disciplineCode,
+        discipline_code: formData.disciplineCode
+      };
+      console.log('Submitting timesheet payload:', payload);
+      let resp;
       if (selectedTimesheet) {
-        await timesheetService.update(selectedTimesheet._id, formData);
+        resp = await timesheetService.update(selectedTimesheet._id, payload);
       } else {
-        await timesheetService.create(formData);
+        resp = await timesheetService.create(payload);
       }
+      console.log('Timesheet save response:', resp);
       handleCloseDialog();
       loadData();
     } catch (error) {
@@ -422,7 +433,7 @@ export const TimesheetsPage = () => {
                 value={formData.disciplineCode}
                 onChange={(e) => setFormData({ ...formData, disciplineCode: e.target.value })}
                 margin="normal"
-                disabled={!!selectedTimesheet}
+                disabled={selectedTimesheet?.status === 'approved'}
                 required
               >
                 {disciplineCodes.map((code) => (
