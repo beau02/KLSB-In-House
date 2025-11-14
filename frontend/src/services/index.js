@@ -133,8 +133,8 @@ export const timesheetService = {
     return response.data;
   },
 
-  reject: async (id, comments) => {
-    const response = await api.patch(`/timesheets/${id}/reject`, { comments });
+  reject: async (id, rejectionReason, comments = '') => {
+    const response = await api.patch(`/timesheets/${id}/reject`, { rejectionReason, comments });
     return response.data;
   },
 

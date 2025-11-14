@@ -305,10 +305,18 @@ export const TimesheetsPage = () => {
     const colors = {
       draft: 'default',
       submitted: 'warning',
+      resubmitted: 'info',
       approved: 'success',
       rejected: 'error'
     };
-    return <Chip label={status.toUpperCase()} color={colors[status]} size="small" />;
+    const labels = {
+      draft: 'DRAFT',
+      submitted: 'SUBMITTED',
+      resubmitted: 'RESUBMITTED',
+      approved: 'APPROVED',
+      rejected: 'REJECTED'
+    };
+    return <Chip label={labels[status] || status.toUpperCase()} color={colors[status]} size="small" />;
   };
 
   if (loading) {
@@ -380,11 +388,11 @@ export const TimesheetsPage = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(timesheet)}
-                      disabled={timesheet.status === 'approved'}
+                      disabled={timesheet.status === 'approved' || timesheet.status === 'submitted' || timesheet.status === 'resubmitted'}
                     >
-                      {timesheet.status === 'draft' ? <Edit /> : <Visibility />}
+                      {(timesheet.status === 'draft' || timesheet.status === 'rejected') ? <Edit /> : <Visibility />}
                     </IconButton>
-                    {timesheet.status === 'draft' && (
+                    {(timesheet.status === 'draft' || timesheet.status === 'rejected') && (
                       <IconButton
                         size="small"
                         color="primary"
@@ -404,8 +412,26 @@ export const TimesheetsPage = () => {
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
         <DialogTitle>
           {selectedTimesheet ? 'View/Edit Timesheet' : 'Create New Timesheet'}
+          {selectedTimesheet && (
+            <Typography variant="caption" display="block" color="textSecondary">
+              Status: {getStatusChip(selectedTimesheet.status)}
+              {selectedTimesheet.resubmissionCount > 0 && (
+                <> • Resubmitted {selectedTimesheet.resubmissionCount} time(s)</>
+              )}
+            </Typography>
+          )}
         </DialogTitle>
         <DialogContent>
+          {selectedTimesheet?.rejectionReason && (
+            <Paper sx={{ p: 2, mb: 2, bgcolor: '#fef2f2', border: '1px solid #fecaca' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#dc2626', mb: 1 }}>
+                ⚠️ Rejection Reason:
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#991b1b' }}>
+                {selectedTimesheet.rejectionReason}
+              </Typography>
+            </Paper>
+          )}
           <Grid container spacing={2}>
             <Grid item xs={12} md={3}>
               <TextField
@@ -433,7 +459,7 @@ export const TimesheetsPage = () => {
                 value={formData.disciplineCode}
                 onChange={(e) => setFormData({ ...formData, disciplineCode: e.target.value })}
                 margin="normal"
-                disabled={selectedTimesheet?.status === 'approved'}
+                disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
                 required
               >
                 {disciplineCodes.map((code) => (
@@ -519,7 +545,7 @@ export const TimesheetsPage = () => {
                                 size="small"
                                 value={entry.hoursCode || '0'}
                                 onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
-                                disabled={selectedTimesheet?.status === 'approved'}
+                                disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
                                 sx={{ width: { xs: '100%', sm: '180px' } }}
                               >
                                 {hoursLegend.map(h => (
@@ -537,7 +563,7 @@ export const TimesheetsPage = () => {
                                 onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
                                 onFocus={(e) => e.target.select()}
                                 inputProps={{ min: 0, max: 24, step: 0.5 }}
-                                disabled={selectedTimesheet?.status === 'approved'}
+                                disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
                                 sx={{ width: { xs: '100%', sm: '100px' } }}
                               />
                             </TableCell>
@@ -548,7 +574,7 @@ export const TimesheetsPage = () => {
                                 fullWidth
                                 value={entry.description}
                                 onChange={(e) => handleEntryChange(index, 'description', e.target.value)}
-                                disabled={selectedTimesheet?.status === 'approved'}
+                                disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
                               >
                                 <MenuItem value="">-</MenuItem>
                                 {activityDescriptions.map((desc) => (
@@ -592,7 +618,7 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={selectedTimesheet?.status === 'approved' || !formData.projectId}
+            disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted' || !formData.projectId}
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

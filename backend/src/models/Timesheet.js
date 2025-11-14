@@ -55,7 +55,7 @@ const timesheetSchema = new mongoose.Schema({
   entries: [timesheetEntrySchema],
   status: {
     type: String,
-    enum: ['draft', 'submitted', 'approved', 'rejected'],
+    enum: ['draft', 'submitted', 'approved', 'rejected', 'resubmitted'],
     default: 'draft'
   },
   submittedAt: {
@@ -71,6 +71,14 @@ const timesheetSchema = new mongoose.Schema({
   comments: {
     type: String,
     trim: true
+  },
+  rejectionReason: {
+    type: String,
+    trim: true
+  },
+  resubmissionCount: {
+    type: Number,
+    default: 0
   },
   totalHours: {
     type: Number,

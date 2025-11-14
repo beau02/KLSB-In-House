@@ -154,16 +154,24 @@ export const ApprovalsPage = () => {
     const colors = {
       draft: 'default',
       submitted: 'warning',
+      resubmitted: 'info',
       approved: 'success',
       rejected: 'error'
     };
-    return <Chip label={status.toUpperCase()} color={colors[status]} size="small" />;
+    const labels = {
+      draft: 'DRAFT',
+      submitted: 'SUBMITTED',
+      resubmitted: 'RESUBMITTED',
+      approved: 'APPROVED',
+      rejected: 'REJECTED'
+    };
+    return <Chip label={labels[status] || status.toUpperCase()} color={colors[status]} size="small" />;
   };
 
   const filterTimesheets = () => {
     switch (tabValue) {
       case 0: // Pending
-        return timesheets.filter(t => t.status === 'submitted');
+        return timesheets.filter(t => t.status === 'submitted' || t.status === 'resubmitted');
       case 1: // Approved
         return timesheets.filter(t => t.status === 'approved');
       case 2: // Rejected

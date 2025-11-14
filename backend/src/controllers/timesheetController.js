@@ -161,9 +161,9 @@ exports.updateTimesheet = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this timesheet' });
     }
 
-    // Can't update if already approved
-    if (timesheet.status === 'approved') {
-      return res.status(400).json({ message: 'Cannot update approved timesheet' });
+    // Can't update if already approved or submitted
+    if (timesheet.status === 'approved' || timesheet.status === 'submitted') {
+      return res.status(400).json({ message: 'Cannot update approved or submitted timesheet' });
     }
 
     const { entries, disciplineCode, comments } = req.body;
@@ -171,6 +171,14 @@ exports.updateTimesheet = async (req, res) => {
     if (entries) timesheet.entries = entries;
     if (disciplineCode !== undefined) timesheet.disciplineCode = disciplineCode;
     if (comments) timesheet.comments = comments;
+
+    // If timesheet was rejected, reset it to draft when user edits
+    if (timesheet.status === 'rejected') {
+      timesheet.status = 'draft';
+      timesheet.approvedBy = undefined;
+      timesheet.approvalDate = undefined;
+      timesheet.rejectionReason = undefined;
+    }
 
     await timesheet.save();
     await timesheet.populate('projectId', 'projectCode projectName');
@@ -200,11 +208,19 @@ exports.submitTimesheet = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    if (timesheet.status !== 'draft') {
-      return res.status(400).json({ message: 'Timesheet already submitted' });
+    // Allow submission for draft or rejected timesheets
+    if (timesheet.status !== 'draft' && timesheet.status !== 'rejected') {
+      return res.status(400).json({ message: 'Timesheet already submitted or approved' });
     }
 
-    timesheet.status = 'submitted';
+    // If resubmitting a rejected timesheet, mark as resubmitted
+    if (timesheet.status === 'rejected') {
+      timesheet.status = 'resubmitted';
+      timesheet.resubmissionCount = (timesheet.resubmissionCount || 0) + 1;
+    } else {
+      timesheet.status = 'submitted';
+    }
+    
     timesheet.submittedAt = new Date();
 
     await timesheet.save();
@@ -230,7 +246,7 @@ exports.approveTimesheet = async (req, res) => {
       return res.status(404).json({ message: 'Timesheet not found' });
     }
 
-    if (timesheet.status !== 'submitted') {
+    if (timesheet.status !== 'submitted' && timesheet.status !== 'resubmitted') {
       return res.status(400).json({ message: 'Timesheet must be submitted first' });
     }
 
@@ -240,6 +256,8 @@ exports.approveTimesheet = async (req, res) => {
     timesheet.approvedBy = req.user.id;
     timesheet.approvalDate = new Date();
     if (comments) timesheet.comments = comments;
+    // Clear rejection reason on approval
+    timesheet.rejectionReason = undefined;
 
     await timesheet.save();
     await timesheet.populate(['userId', 'projectId']);
@@ -264,16 +282,17 @@ exports.rejectTimesheet = async (req, res) => {
       return res.status(404).json({ message: 'Timesheet not found' });
     }
 
-    if (timesheet.status !== 'submitted') {
+    if (timesheet.status !== 'submitted' && timesheet.status !== 'resubmitted') {
       return res.status(400).json({ message: 'Timesheet must be submitted first' });
     }
 
-    const { comments } = req.body;
+    const { comments, rejectionReason } = req.body;
 
     timesheet.status = 'rejected';
     timesheet.approvedBy = req.user.id;
     timesheet.approvalDate = new Date();
     if (comments) timesheet.comments = comments;
+    if (rejectionReason) timesheet.rejectionReason = rejectionReason;
 
     await timesheet.save();
     await timesheet.populate(['userId', 'projectId']);
