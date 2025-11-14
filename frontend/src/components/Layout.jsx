@@ -28,12 +28,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const drawerWidth = 240;
+const drawerWidth = 200;
 
 export const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
-  const { user, logout, isManager } = useAuth();
+  const { user, logout, isManager, isAdmin } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -55,8 +55,12 @@ export const Layout = ({ children }) => {
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'My Timesheets', icon: <Assignment />, path: '/timesheets' },
     { text: 'Projects', icon: <Work />, path: '/projects' },
-    { text: 'Staff Management', icon: <People />, path: '/staff' },
   ];
+
+  // Only show staff management to admins
+  if (isAdmin) {
+    menuItems.push({ text: 'Staff Management', icon: <People />, path: '/staff' });
+  }
 
   if (isManager) {
     menuItems.push(

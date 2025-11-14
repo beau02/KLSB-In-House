@@ -126,6 +126,9 @@ export const timesheetService = {
   },
 
   approve: async (id, comments) => {
+    if (!id) {
+      throw new Error('Invalid timesheet id');
+    }
     const response = await api.patch(`/timesheets/${id}/approve`, { comments });
     return response.data;
   },

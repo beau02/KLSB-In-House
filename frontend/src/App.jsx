@@ -140,7 +140,7 @@ function App() {
             <Route
               path="/staff"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <Layout>
                     <StaffManagementPage />
                   </Layout>

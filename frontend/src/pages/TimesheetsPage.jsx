@@ -481,8 +481,8 @@ export const TimesheetsPage = () => {
             </Typography>
             <Card variant="outlined">
               <CardContent>
-                <TableContainer sx={{ maxHeight: 400 }}>
-                  <Table size="small" stickyHeader>
+                  <TableContainer sx={{ maxHeight: 400, overflowX: 'auto' }}>
+                  <Table size="small" stickyHeader sx={{ minWidth: 900 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell width="10%"><strong>Date</strong></TableCell>
@@ -520,7 +520,7 @@ export const TimesheetsPage = () => {
                                 value={entry.hoursCode || '0'}
                                 onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
                                 disabled={selectedTimesheet?.status === 'approved'}
-                                sx={{ width: '180px' }}
+                                sx={{ width: { xs: '100%', sm: '180px' } }}
                               >
                                 {hoursLegend.map(h => (
                                   <MenuItem key={h.value} value={h.value}>
@@ -538,7 +538,7 @@ export const TimesheetsPage = () => {
                                 onFocus={(e) => e.target.select()}
                                 inputProps={{ min: 0, max: 24, step: 0.5 }}
                                 disabled={selectedTimesheet?.status === 'approved'}
-                                sx={{ width: '100px' }}
+                                sx={{ width: { xs: '100%', sm: '100px' } }}
                               />
                             </TableCell>
                             <TableCell>

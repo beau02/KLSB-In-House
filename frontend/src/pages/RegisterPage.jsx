@@ -107,7 +107,7 @@ export const RegisterPage = () => {
         <Paper 
           elevation={24} 
           sx={{ 
-            p: 5, 
+            p: { xs: 2, sm: 5 }, 
             borderRadius: 4,
             background: 'rgba(255,255,255,0.98)',
             backdropFilter: 'blur(10px)',

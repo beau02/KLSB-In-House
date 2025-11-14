@@ -55,7 +55,20 @@ export const ApprovalsPage = () => {
   };
 
   const handleOpenDialog = async (timesheet) => {
-    setSelectedTimesheet(timesheet);
+    // fetch fresh timesheet details to ensure _id and populated fields are present
+    try {
+      if (timesheet && timesheet._id) {
+        const resp = await timesheetService.getById(timesheet._id);
+        // resp may be { success, timesheet }
+        const full = resp && resp.timesheet ? resp.timesheet : timesheet;
+        setSelectedTimesheet(full);
+      } else {
+        setSelectedTimesheet(timesheet);
+      }
+    } catch (err) {
+      console.error('Failed to fetch timesheet details, falling back to provided object', err);
+      setSelectedTimesheet(timesheet);
+    }
     setComments('');
     setDialogOpen(true);
   };
@@ -70,11 +83,34 @@ export const ApprovalsPage = () => {
     try {
       const target = timesheetParam || selectedTimesheet;
       const payloadComments = timesheetParam ? '' : comments;
-      if (!target) {
-        alert('No timesheet selected');
+      
+      console.log('=== APPROVE DEBUG ===');
+      console.log('timesheetParam:', timesheetParam);
+      console.log('selectedTimesheet:', selectedTimesheet);
+      console.log('target:', target);
+      console.log('target keys:', target ? Object.keys(target) : 'no target');
+      
+      // Extract ID - handle both _id and id fields
+      let id = null;
+      if (target) {
+        // MongoDB documents use _id
+        if (target._id) {
+          id = typeof target._id === 'object' ? target._id.toString() : target._id;
+          console.log('Found _id:', id, 'type:', typeof target._id);
+        } else if (target.id) {
+          id = target.id;
+          console.log('Found id:', id);
+        }
+      }
+      
+      if (!id) {
+        console.error('No valid timesheet ID found. Target object:', JSON.stringify(target, null, 2));
+        alert('No valid timesheet selected for approval. Check console for details.');
         return;
       }
-      await timesheetService.approve(target._id, payloadComments);
+      
+      console.log('Calling approve API with ID:', id);
+      await timesheetService.approve(id, payloadComments);
       handleCloseDialog();
       loadTimesheets();
     } catch (error) {
@@ -89,7 +125,23 @@ export const ApprovalsPage = () => {
       return;
     }
     try {
-      await timesheetService.reject(selectedTimesheet._id, comments);
+      // Extract ID robustly
+      let id = null;
+      if (selectedTimesheet) {
+        if (selectedTimesheet._id) {
+          id = typeof selectedTimesheet._id === 'object' ? selectedTimesheet._id.toString() : selectedTimesheet._id;
+        } else if (selectedTimesheet.id) {
+          id = selectedTimesheet.id;
+        }
+      }
+      
+      if (!id) {
+        console.error('No valid timesheet ID for rejection. Selected:', selectedTimesheet);
+        alert('No valid timesheet selected for rejection');
+        return;
+      }
+      
+      await timesheetService.reject(id, comments);
       handleCloseDialog();
       loadTimesheets();
     } catch (error) {
@@ -394,7 +446,7 @@ export const ApprovalsPage = () => {
               <Button onClick={handleReject} color="error" variant="outlined">
                 Reject
               </Button>
-              <Button onClick={handleApprove} color="success" variant="contained">
+              <Button onClick={() => handleApprove()} color="success" variant="contained">
                 Approve
               </Button>
             </>
