@@ -122,13 +122,11 @@ exports.deleteProject = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Soft delete - set status to cancelled
-    project.status = 'cancelled';
-    await project.save();
+    await Project.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
-      message: 'Project cancelled successfully'
+      message: 'Project deleted successfully'
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

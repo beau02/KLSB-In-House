@@ -20,6 +20,6 @@ router.route('/')
 router.route('/:id')
   .get(getProject)
   .put(authorize('admin', 'manager'), updateProject)
-  .delete(authorize('admin'), deleteProject);
+  .delete(authorize('admin', 'manager'), deleteProject);
 
 module.exports = router;

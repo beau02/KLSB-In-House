@@ -20,9 +20,14 @@ import {
   MenuItem,
   Box,
   CircularProgress,
-  Grid
+  Grid,
+  Card,
+  CardContent,
+  Avatar,
+  Stack,
+  Divider
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, AdminPanelSettings, Person, ManageAccounts } from '@mui/icons-material';
 import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -154,19 +159,57 @@ export const StaffManagementPage = () => {
     return (
       <Chip
         label={status.toUpperCase()}
-        color={status === 'active' ? 'success' : 'default'}
+        sx={{
+          backgroundColor: status === 'active' ? '#e8f5e9' : '#fafafa',
+          color: status === 'active' ? '#2e7d32' : '#757575',
+          fontWeight: 600,
+          border: status === 'active' ? '1px solid #2e7d3230' : '1px solid #75757530'
+        }}
         size="small"
       />
     );
   };
 
   const getRoleChip = (role) => {
-    const colors = {
-      admin: 'error',
-      manager: 'warning',
-      employee: 'primary'
+    const roleConfig = {
+      admin: { 
+        color: 'error', 
+        icon: <AdminPanelSettings sx={{ fontSize: 16 }} />,
+        bg: '#fff5f5',
+        textColor: '#d32f2f'
+      },
+      manager: { 
+        color: 'warning', 
+        icon: <ManageAccounts sx={{ fontSize: 16 }} />,
+        bg: '#fff8e1',
+        textColor: '#f57c00'
+      },
+      employee: { 
+        color: 'primary', 
+        icon: <Person sx={{ fontSize: 16 }} />,
+        bg: '#e3f2fd',
+        textColor: '#1976d2'
+      }
     };
-    return <Chip label={role.toUpperCase()} color={colors[role]} size="small" />;
+    
+    const config = roleConfig[role] || roleConfig.employee;
+    
+    return (
+      <Chip 
+        icon={config.icon}
+        label={role.toUpperCase()} 
+        sx={{
+          backgroundColor: config.bg,
+          color: config.textColor,
+          fontWeight: 600,
+          border: `1px solid ${config.textColor}30`,
+          '& .MuiChip-icon': {
+            color: config.textColor
+          }
+        }}
+        size="small" 
+      />
+    );
   };
 
   if (loading) {
@@ -187,31 +230,108 @@ export const StaffManagementPage = () => {
           Manage employee information and access
         </Typography>
       </Box>
+
+      {/* Role Statistics Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.3)', width: 56, height: 56 }}>
+                  <AdminPanelSettings sx={{ fontSize: 32 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                    {staff.filter(s => s.role === 'admin').length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Administrators
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.3)', width: 56, height: 56 }}>
+                  <ManageAccounts sx={{ fontSize: 32 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                    {staff.filter(s => s.role === 'manager').length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Managers
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            color: 'white'
+          }}>
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.3)', width: 56, height: 56 }}>
+                  <Person sx={{ fontSize: 32 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                    {staff.filter(s => s.role === 'employee').length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Employees
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         {!isEmployee && (
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => handleOpenDialog()}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+              }
+            }}
           >
             Add Staff
           </Button>
         )}
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
         <Table sx={{ minWidth: 1000 }}>
           <TableHead>
-            <TableRow>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Employee No</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Name</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Designation</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Contact No.</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Department</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Email</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Role</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Status</TableCell>
-              {!isEmployee && <TableCell sx={{ whiteSpace: 'nowrap' }}>Actions</TableCell>}
+            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Employee No</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Name</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Designation</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Contact No.</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Department</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Email</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Role</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Status</TableCell>
+              {!isEmployee && <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -223,9 +343,15 @@ export const StaffManagementPage = () => {
               </TableRow>
             ) : (
               staff.map((member) => (
-                <TableRow key={member._id}>
+                <TableRow 
+                  key={member._id}
+                  sx={{ 
+                    '&:hover': { bgcolor: '#f8f9fa' },
+                    transition: 'background-color 0.2s'
+                  }}
+                >
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.employeeNo || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{`${member.firstName} ${member.lastName}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.designation || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.department || '-'}</TableCell>
@@ -234,7 +360,14 @@ export const StaffManagementPage = () => {
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{getStatusChip(member.status)}</TableCell>
                   {!isEmployee && (
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <IconButton size="small" onClick={() => handleOpenDialog(member)}>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleOpenDialog(member)}
+                        sx={{ 
+                          color: '#1976d2',
+                          '&:hover': { bgcolor: '#e3f2fd' }
+                        }}
+                      >
                         <Edit />
                       </IconButton>
                       <IconButton 
@@ -242,6 +375,11 @@ export const StaffManagementPage = () => {
                         color={member.status === 'inactive' ? 'error' : 'warning'}
                         onClick={() => handleDelete(member)}
                         title={member.status === 'inactive' ? 'Permanently Delete' : 'Deactivate'}
+                        sx={{ 
+                          '&:hover': { 
+                            bgcolor: member.status === 'inactive' ? '#ffebee' : '#fff8e1' 
+                          }
+                        }}
                       >
                         <Delete />
                       </IconButton>
@@ -255,10 +393,14 @@ export const StaffManagementPage = () => {
       </TableContainer>
 
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          fontWeight: 700
+        }}>
           {selectedStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -345,9 +487,24 @@ export const StaffManagementPage = () => {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <MenuItem value="employee">Employee</MenuItem>
-                  <MenuItem value="manager">Manager</MenuItem>
-                  <MenuItem value="admin">Admin</MenuItem>
+                  <MenuItem value="employee">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Person sx={{ fontSize: 18, color: '#1976d2' }} />
+                      <span>Employee</span>
+                    </Stack>
+                  </MenuItem>
+                  <MenuItem value="manager">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <ManageAccounts sx={{ fontSize: 18, color: '#f57c00' }} />
+                      <span>Manager</span>
+                    </Stack>
+                  </MenuItem>
+                  <MenuItem value="admin">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <AdminPanelSettings sx={{ fontSize: 18, color: '#d32f2f' }} />
+                      <span>Admin</span>
+                    </Stack>
+                  </MenuItem>
                 </TextField>
               </Grid>
             )}
@@ -365,9 +522,18 @@ export const StaffManagementPage = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={handleCloseDialog} sx={{ color: '#757575' }}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+              }
+            }}
+          >
             {selectedStaff ? 'Update' : 'Add'}
           </Button>
         </DialogActions>

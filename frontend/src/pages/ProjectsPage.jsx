@@ -108,10 +108,14 @@ export const ProjectsPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       try {
-        await projectService.delete(id);
+        console.log('Attempting to delete project:', id);
+        const result = await projectService.delete(id);
+        console.log('Delete result:', result);
+        alert('Project deleted successfully');
         loadData();
       } catch (error) {
         console.error('Error deleting project:', error);
+        console.error('Error response:', error.response);
         alert(error.response?.data?.message || 'Error deleting project');
       }
     }
