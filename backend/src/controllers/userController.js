@@ -49,7 +49,7 @@ exports.getUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, department, phoneNumber, employeeNo, designation, contactNo } = req.body;
+    const { email, password, firstName, lastName, role, department, phoneNumber, employeeNo, designation, contactNo, hourlyRate } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -67,7 +67,8 @@ exports.createUser = async (req, res) => {
       phoneNumber,
       employeeNo,
       designation,
-      contactNo
+      contactNo,
+      hourlyRate: hourlyRate || 0
     });
 
     res.status(201).json({
@@ -84,7 +85,10 @@ exports.createUser = async (req, res) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res) => {
   try {
-    const { firstName, lastName, role, department, phoneNumber, status, employeeNo, designation, contactNo, password } = req.body;
+    const { firstName, lastName, role, department, phoneNumber, status, employeeNo, designation, contactNo, password, hourlyRate } = req.body;
+
+    // Debug logs to help diagnose hourlyRate update issues
+    console.log('updateUser called by:', req.user?.email, 'payload:', req.body);
 
     const user = await User.findById(req.params.id);
     
@@ -95,16 +99,26 @@ exports.updateUser = async (req, res) => {
     // Update fields
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    if (role) user.role = role;
+
+    // Only admins may change the user's role or status
+    if (role && req.user.role === 'admin') user.role = role;
+    if (status && req.user.role === 'admin') user.status = status;
+
     if (department) user.department = department;
     if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (status) user.status = status;
     if (employeeNo !== undefined) user.employeeNo = employeeNo;
     if (designation !== undefined) user.designation = designation;
     if (contactNo !== undefined) user.contactNo = contactNo;
+
+    // Allow hourlyRate updates by admin and manager
+    if (hourlyRate !== undefined) user.hourlyRate = hourlyRate;
     if (password) user.password = password;
 
+    console.log('Before save - user hourlyRate will be:', user.hourlyRate);
+
     await user.save();
+
+    console.log('After save - user hourlyRate saved as:', user.hourlyRate);
 
     res.json({
       success: true,

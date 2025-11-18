@@ -23,6 +23,7 @@ import {
   Work,
   Assessment,
   BarChart,
+  AttachMoney,
   ExitToApp
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -65,7 +66,8 @@ export const Layout = ({ children }) => {
   if (isManager) {
     menuItems.push(
       { text: 'Approvals', icon: <Assessment />, path: '/approvals' },
-      { text: 'Reports', icon: <BarChart />, path: '/reports' }
+      { text: 'Reports', icon: <BarChart />, path: '/reports' },
+      { text: 'Project Costing', icon: <AttachMoney />, path: '/costing' }
     );
   }
 

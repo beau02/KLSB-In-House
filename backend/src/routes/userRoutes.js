@@ -20,7 +20,7 @@ router.route('/')
 
 router.route('/:id')
   .get(authorize('admin', 'manager'), getUser)
-  .put(authorize('admin'), updateUser)
+  .put(authorize('admin', 'manager'), updateUser)
   .delete(authorize('admin'), deleteUser);
 
 router.route('/:id/permanent')

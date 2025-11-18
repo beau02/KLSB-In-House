@@ -176,3 +176,6 @@ export const statsService = {
     return response.data;
   }
 };
+
+// Re-export the axios instance so modules can import { api } from './services'
+export { default as api } from './api';

@@ -78,7 +78,8 @@ export const StaffManagementPage = () => {
         contactNo: staffMember.contactNo || '',
         department: staffMember.department || '',
         role: staffMember.role,
-        status: staffMember.status
+        status: staffMember.status,
+        hourlyRate: staffMember.hourlyRate || 0
       });
     } else {
       setSelectedStaff(null);
@@ -92,7 +93,8 @@ export const StaffManagementPage = () => {
         contactNo: '',
         department: '',
         role: 'employee',
-        status: 'active'
+        status: 'active',
+        hourlyRate: 0
       });
     }
     setDialogOpen(true);
@@ -112,6 +114,7 @@ export const StaffManagementPage = () => {
         delete submitData.password;
       }
 
+      console.log('Submitting staff update:', submitData);
       if (selectedStaff) {
         await userService.update(selectedStaff._id, submitData);
       } else {
@@ -324,6 +327,7 @@ export const StaffManagementPage = () => {
           <TableHead>
             <TableRow sx={{ bgcolor: '#f5f7fa' }}>
               <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Employee No</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Hourly Rate</TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Name</TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Designation</TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Contact No.</TableCell>
@@ -351,6 +355,7 @@ export const StaffManagementPage = () => {
                   }}
                 >
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.employeeNo || '-'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.designation || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
@@ -454,6 +459,16 @@ export const StaffManagementPage = () => {
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 placeholder="e.g., Engineering Department"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Hourly Rate (MYR)"
+                type="number"
+                value={formData.hourlyRate}
+                onChange={(e) => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })}
+                helperText="Set employee's hourly cost in MYR"
               />
             </Grid>
             <Grid item xs={12} sm={6}>

@@ -8,6 +8,47 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Simple in-page error overlay to surface runtime errors when devtools aren't open
+      (function() {
+        function showError(message, stack) {
+          try {
+            var el = document.getElementById('__error_overlay__');
+            if (!el) {
+              el = document.createElement('div');
+              el.id = '__error_overlay__';
+              el.style.position = 'fixed';
+              el.style.left = '0';
+              el.style.top = '0';
+              el.style.right = '0';
+              el.style.background = 'rgba(200,30,30,0.95)';
+              el.style.color = 'white';
+              el.style.padding = '16px';
+              el.style.zIndex = 999999;
+              el.style.fontFamily = 'monospace';
+              el.style.whiteSpace = 'pre-wrap';
+              el.style.maxHeight = '50vh';
+              el.style.overflow = 'auto';
+              document.body.appendChild(el);
+            }
+            el.textContent = message + (stack ? '\n\n' + stack : '');
+          } catch (e) {
+            console.error('Failed to show overlay', e);
+          }
+        }
+
+        window.addEventListener('error', function(ev) {
+          showError(ev.message || 'Script error', ev.error && ev.error.stack);
+        });
+
+        window.addEventListener('unhandledrejection', function(ev) {
+          var reason = ev.reason;
+          var msg = (reason && reason.message) || String(reason) || 'Unhandled promise rejection';
+          var stack = reason && reason.stack;
+          showError(msg, stack);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

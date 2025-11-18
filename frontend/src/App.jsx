@@ -12,6 +12,7 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { StaffManagementPage } from './pages/StaffManagementPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { ProjectCostingPage } from './pages/ProjectCostingPage';
 
 const theme = createTheme({
   palette: {
@@ -163,6 +164,16 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <ReportsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/costing"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ProjectCostingPage />
                   </Layout>
                 </ProtectedRoute>
               }

@@ -10,6 +10,7 @@ const projectRoutes = require('./routes/projectRoutes');
 const timesheetRoutes = require('./routes/timesheetRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const statsRoutes = require('./routes/stats');
+const costingRoutes = require('./routes/costingRoutes');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/timesheets', timesheetRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/costing', costingRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -49,6 +51,17 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+
+// Global error handlers for silent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+  process.exit(1);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

@@ -45,8 +45,7 @@ const projectSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster searches
-projectSchema.index({ projectCode: 1 });
+// Index for faster searches (projectCode already has unique:true, no need for separate index)
 projectSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Project', projectSchema);
