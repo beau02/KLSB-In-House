@@ -366,7 +366,7 @@ export const StaffManagementPage = () => {
         <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f5f7fa' }}>
-              <TableCell sx={{ width: 110, fontWeight: 700 }}>Employee No</TableCell>
+              <TableCell sx={{ width: 180, fontWeight: 700 }}>Employee No</TableCell>
               <TableCell sx={{ width: 120, fontWeight: 700 }}>Hourly Rate</TableCell>
               <TableCell sx={{ width: 200, fontWeight: 700 }}>Name</TableCell>
               <TableCell sx={{ width: 160, fontWeight: 700 }}>Designation</TableCell>
@@ -394,7 +394,7 @@ export const StaffManagementPage = () => {
                     transition: 'background-color 0.2s'
                   }}
                 >
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.employeeNo || '-'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.employeeNo || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
