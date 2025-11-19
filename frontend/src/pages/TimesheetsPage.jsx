@@ -191,6 +191,7 @@ export const TimesheetsPage = () => {
     { value: '0', label: '0 - Non chargeable' },
     { value: '8', label: '8 - Full day work' },
     { value: '4', label: '4 - Half day work' },
+    { value: 'CUSTOM', label: 'Custom hours' },
     { value: 'AL', label: 'AL - Annual leave' },
     { value: 'MC', label: 'MC - Medical leave' },
     { value: 'UL', label: 'UL - Unpaid leave' },
@@ -244,6 +245,7 @@ export const TimesheetsPage = () => {
       if (code === '8') mappedHours = 8;
       else if (code === '4') mappedHours = 4;
       else if (code === '0') mappedHours = 0;
+      else if (code === 'CUSTOM') mappedHours = newEntries[index].normalHours || 0; // Keep existing value for custom
       else mappedHours = 0; // leave codes and others default to 0
 
       newEntries[index] = { ...newEntries[index], hoursCode: code, normalHours: mappedHours };
@@ -540,20 +542,50 @@ export const TimesheetsPage = () => {
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <TextField
-                                select
-                                size="small"
-                                value={entry.hoursCode || '0'}
-                                onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
-                                disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
-                                sx={{ width: { xs: '100%', sm: '180px' } }}
-                              >
-                                {hoursLegend.map(h => (
-                                  <MenuItem key={h.value} value={h.value}>
-                                    {h.label}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
+                              {entry.hoursCode === 'CUSTOM' ? (
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <TextField
+                                    select
+                                    size="small"
+                                    value="CUSTOM"
+                                    onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
+                                    disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
+                                    sx={{ width: '120px' }}
+                                  >
+                                    {hoursLegend.map(h => (
+                                      <MenuItem key={h.value} value={h.value}>
+                                        {h.label}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={entry.normalHours || ''}
+                                    onChange={(e) => handleEntryChange(index, 'normalHours', e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    inputProps={{ min: 0, max: 24, step: 0.5 }}
+                                    disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
+                                    placeholder="hrs"
+                                    sx={{ width: '80px' }}
+                                  />
+                                </Box>
+                              ) : (
+                                <TextField
+                                  select
+                                  size="small"
+                                  value={entry.hoursCode || '0'}
+                                  onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
+                                  disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
+                                  sx={{ width: { xs: '100%', sm: '180px' } }}
+                                >
+                                  {hoursLegend.map(h => (
+                                    <MenuItem key={h.value} value={h.value}>
+                                      {h.label}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              )}
                             </TableCell>
                             <TableCell>
                               <TextField

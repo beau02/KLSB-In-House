@@ -67,6 +67,14 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Convert empty employeeNo to undefined to work with sparse unique index
+userSchema.pre('save', function(next) {
+  if (this.employeeNo !== undefined && (!this.employeeNo || this.employeeNo.trim() === '')) {
+    this.employeeNo = undefined;
+  }
+  next();
+});
+
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {

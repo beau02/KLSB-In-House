@@ -65,7 +65,7 @@ exports.createUser = async (req, res) => {
       role: role || 'employee',
       department,
       phoneNumber,
-      employeeNo,
+      employeeNo: employeeNo && employeeNo.trim() !== '' ? employeeNo.trim() : undefined,
       designation,
       contactNo,
       hourlyRate: hourlyRate || 0
@@ -106,7 +106,9 @@ exports.updateUser = async (req, res) => {
 
     if (department) user.department = department;
     if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (employeeNo !== undefined) user.employeeNo = employeeNo;
+    if (employeeNo !== undefined) {
+      user.employeeNo = employeeNo && employeeNo.trim() !== '' ? employeeNo.trim() : undefined;
+    }
     if (designation !== undefined) user.designation = designation;
     if (contactNo !== undefined) user.contactNo = contactNo;
 
