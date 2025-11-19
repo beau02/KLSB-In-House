@@ -104,8 +104,10 @@ timesheetSchema.pre('save', function(next) {
   next();
 });
 
-// Compound index for unique timesheet per user/project/month/year
-timesheetSchema.index({ userId: 1, projectId: 1, month: 1, year: 1 }, { unique: true });
+// Compound index for unique timesheet per user/project/discipline/month/year
+// Include `disciplineCode` so a user can create multiple timesheets
+// for the same project/month/year but with different disciplines.
+timesheetSchema.index({ userId: 1, projectId: 1, disciplineCode: 1, month: 1, year: 1 }, { unique: true });
 timesheetSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Timesheet', timesheetSchema);

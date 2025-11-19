@@ -111,13 +111,27 @@ exports.createTimesheet = async (req, res) => {
     const { projectId, disciplineCode, month, year, entries } = req.body;
     const userId = req.user.id;
 
-    // Check if timesheet already exists for this user/project/month/year
-    const existingTimesheet = await Timesheet.findOne({
-      userId,
-      projectId,
-      month,
-      year
-    });
+    // Check if timesheet already exists for this user/project/month/year.
+    // If a disciplineCode is provided, include it in the check so different
+    // disciplines can have separate timesheets for the same project/period.
+    let existingTimesheet;
+    if (disciplineCode && String(disciplineCode).trim() !== '') {
+      existingTimesheet = await Timesheet.findOne({
+        userId,
+        projectId,
+        disciplineCode: disciplineCode,
+        month,
+        year
+      });
+    } else {
+      // No discipline provided: fall back to the old uniqueness behaviour
+      existingTimesheet = await Timesheet.findOne({
+        userId,
+        projectId,
+        month,
+        year
+      });
+    }
 
     if (existingTimesheet) {
       return res.status(400).json({ 

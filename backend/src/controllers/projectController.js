@@ -51,10 +51,11 @@ exports.createProject = async (req, res) => {
   try {
     const { projectCode, projectName, description, startDate, endDate, company, contractor, teamMembers } = req.body;
 
-    // Check if project code already exists
-    const projectExists = await Project.findOne({ projectCode });
+    // Check if project with same code AND name already exists
+    // Allow same projectCode for different projectName values
+    const projectExists = await Project.findOne({ projectCode, projectName });
     if (projectExists) {
-      return res.status(400).json({ message: 'Project code already exists' });
+      return res.status(400).json({ message: 'Project with same code and title already exists' });
     }
 
     const project = await Project.create({

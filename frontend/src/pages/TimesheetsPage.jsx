@@ -618,7 +618,13 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted' || !formData.projectId}
+            disabled={
+              selectedTimesheet?.status === 'approved' ||
+              selectedTimesheet?.status === 'submitted' ||
+              selectedTimesheet?.status === 'resubmitted' ||
+              !formData.projectId ||
+              !formData.disciplineCode
+            }
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

@@ -322,20 +322,20 @@ export const StaffManagementPage = () => {
         )}
       </Box>
 
-      <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Table sx={{ minWidth: 1000 }}>
+      <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflowX: 'auto' }}>
+        <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f5f7fa' }}>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Employee No</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Hourly Rate</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Name</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Designation</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Contact No.</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Department</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Email</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Role</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Status</TableCell>
-              {!isEmployee && <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Actions</TableCell>}
+              <TableCell sx={{ width: 110, fontWeight: 700 }}>Employee No</TableCell>
+              <TableCell sx={{ width: 120, fontWeight: 700 }}>Hourly Rate</TableCell>
+              <TableCell sx={{ width: 200, fontWeight: 700 }}>Name</TableCell>
+              <TableCell sx={{ width: 160, fontWeight: 700 }}>Designation</TableCell>
+              <TableCell sx={{ width: 130, fontWeight: 700 }}>Contact No.</TableCell>
+              <TableCell sx={{ width: 160, fontWeight: 700 }}>Department</TableCell>
+              <TableCell sx={{ width: 240, fontWeight: 700 }}>Email</TableCell>
+              <TableCell sx={{ width: 120, fontWeight: 700 }}>Role</TableCell>
+              <TableCell sx={{ width: 100, fontWeight: 700 }}>Status</TableCell>
+              {!isEmployee && <TableCell sx={{ width: 110, fontWeight: 700 }}>Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -356,11 +356,11 @@ export const StaffManagementPage = () => {
                 >
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.employeeNo || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.designation || '-'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.department || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.email}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department || '-'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.email}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{getRoleChip(member.role)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{getStatusChip(member.status)}</TableCell>
                   {!isEmployee && (

@@ -4,7 +4,8 @@ const projectSchema = new mongoose.Schema({
   projectCode: {
     type: String,
     required: [true, 'Project code is required'],
-    unique: true,
+    // allow duplicate project codes when titles differ
+    unique: false,
     uppercase: true,
     trim: true
   },
