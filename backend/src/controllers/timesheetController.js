@@ -1,11 +1,12 @@
 const Timesheet = require('../models/Timesheet');
+const User = require('../models/User');
 
 // @desc    Get all timesheets
 // @route   GET /api/timesheets
 // @access  Private
 exports.getAllTimesheets = async (req, res) => {
   try {
-    const { status, month, year, userId, projectId } = req.query;
+    const { status, month, year, userId, projectId, name } = req.query;
     const filter = {};
 
     if (status) filter.status = status;
@@ -13,6 +14,38 @@ exports.getAllTimesheets = async (req, res) => {
     if (year) filter.year = parseInt(year);
     if (userId) filter.userId = userId;
     if (projectId) filter.projectId = projectId;
+
+    // If a name filter is provided, resolve matching user IDs and filter by them (exact match)
+    if (name && String(name).trim() !== '') {
+      const raw = String(name).trim();
+      const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+      const escaped = escapeRegex(raw);
+      const exact = new RegExp(`^${escaped}$`, 'i');
+
+      const or = [
+        { firstName: exact },
+        { lastName: exact },
+        { email: exact },
+        { employeeNo: exact }
+      ];
+
+      const parts = raw.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        const first = escapeRegex(parts[0]);
+        const last = escapeRegex(parts[parts.length - 1]);
+        const firstRegex = new RegExp(`^${first}$`, 'i');
+        const lastRegex = new RegExp(`^${last}$`, 'i');
+        or.push({ $and: [ { firstName: firstRegex }, { lastName: lastRegex } ] });
+      }
+
+      const matchedUsers = await User.find({ $or: or }).select('_id');
+      const matchedIds = matchedUsers.map(u => u._id);
+      // If no users matched, short-circuit to empty result
+      if (matchedIds.length === 0) {
+        return res.json({ success: true, count: 0, timesheets: [] });
+      }
+      filter.userId = { $in: matchedIds };
+    }
 
     // If user is not admin/manager, only show their own timesheets
     if (req.user.role === 'employee') {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -29,6 +29,7 @@ export const ReportsPage = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedProject, setSelectedProject] = useState('all');
+  const [nameFilter, setNameFilter] = useState('');
 
   useEffect(() => {
     loadProjects();
@@ -37,6 +38,18 @@ export const ReportsPage = () => {
   useEffect(() => {
     loadTimesheets();
   }, [selectedMonth, selectedYear, selectedProject]);
+
+  // Debounced live search on name filter (auto-search while typing)
+  const nameSearchTimerRef = useRef(null);
+  useEffect(() => {
+    if (nameSearchTimerRef.current) clearTimeout(nameSearchTimerRef.current);
+    nameSearchTimerRef.current = setTimeout(() => {
+      loadTimesheets();
+    }, 400);
+    return () => {
+      if (nameSearchTimerRef.current) clearTimeout(nameSearchTimerRef.current);
+    };
+  }, [nameFilter]);
 
   const loadProjects = async () => {
     try {
@@ -56,6 +69,7 @@ export const ReportsPage = () => {
 
       const params = { status: 'approved', month: monthNum, year: yearNum };
       if (selectedProject && selectedProject !== 'all') params.projectId = selectedProject;
+      if (nameFilter && nameFilter.trim() !== '') params.name = nameFilter.trim();
 
       // Let backend do filtering to avoid client-side mismatch
       const response = await timesheetService.getAll(params);
@@ -214,6 +228,17 @@ export const ReportsPage = () => {
               </MenuItem>
             ))}
           </TextField>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <TextField
+            fullWidth
+            label="Search employee name"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') loadTimesheets(); }}
+            placeholder="First or last name"
+            size="small"
+          />
         </Grid>
       </Grid>
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Typography,
   Button,
+  InputAdornment,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +28,7 @@ import {
   Stack,
   Divider
 } from '@mui/material';
-import { Add, Edit, Delete, AdminPanelSettings, Person, ManageAccounts } from '@mui/icons-material';
+import { Add, Edit, Delete, AdminPanelSettings, Person, ManageAccounts, Search, Close } from '@mui/icons-material';
 import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -35,6 +36,7 @@ export const StaffManagementPage = () => {
   const { isAdmin, isEmployee } = useAuth();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nameFilter, setNameFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [formData, setFormData] = useState({
@@ -56,7 +58,12 @@ export const StaffManagementPage = () => {
 
   const loadStaff = async () => {
     try {
-      const response = await userService.getAll();
+      setLoading(true);
+      const params = {};
+      if (nameFilter && nameFilter.trim() !== '') params.name = nameFilter.trim();
+      console.log('Loading staff with params:', params);
+      const response = await userService.getAll(params);
+      console.log('Staff load response:', response?.count, response?.users?.length);
       setStaff(response.users || []);
     } catch (error) {
       console.error('Error loading staff:', error);
@@ -64,6 +71,18 @@ export const StaffManagementPage = () => {
       setLoading(false);
     }
   };
+
+  // Debounced live search: call loadStaff 400ms after typing stops
+  const searchTimerRef = useRef(null);
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      loadStaff();
+    }, 400);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [nameFilter]);
 
   const handleOpenDialog = (staffMember = null) => {
     if (staffMember) {
@@ -320,6 +339,27 @@ export const StaffManagementPage = () => {
             Add Staff
           </Button>
         )}
+        <Box sx={{ ml: 2, minWidth: 320 }}>
+          <TextField
+            fullWidth
+            label="Search employee name"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') loadStaff(); }}
+            placeholder="Type first or last name and press Enter"
+            size="small"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Search sx={{ mr: 1, cursor: 'pointer' }} onClick={loadStaff} />
+                  {nameFilter && (
+                    <Close sx={{ cursor: 'pointer' }} onClick={() => { setNameFilter(''); loadStaff(); }} />
+                  )}
+                </InputAdornment>
+              )
+            }}
+          />
+        </Box>
       </Box>
 
       <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflowX: 'auto' }}>

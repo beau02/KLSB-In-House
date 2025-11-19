@@ -224,19 +224,19 @@ export const ApprovalsPage = () => {
         </Tabs>
       </Box>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
-        <Table sx={{ minWidth: 1000 }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 3, overflowX: 'auto' }}>
+        <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Employee</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Period</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Project</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Normal Hours</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>OT Hours</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Total Hours</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Status</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Submitted Date</TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>Actions</TableCell>
+              <TableCell sx={{ width: 180, fontWeight: 700 }}>Employee</TableCell>
+              <TableCell sx={{ width: 120, fontWeight: 700 }}>Period</TableCell>
+              <TableCell sx={{ width: 420, fontWeight: 700 }}>Project</TableCell>
+              <TableCell sx={{ width: 110, fontWeight: 700 }}>Normal Hours</TableCell>
+              <TableCell sx={{ width: 110, fontWeight: 700 }}>OT Hours</TableCell>
+              <TableCell sx={{ width: 110, fontWeight: 700 }}>Total Hours</TableCell>
+              <TableCell sx={{ width: 100, fontWeight: 700 }}>Status</TableCell>
+              <TableCell sx={{ width: 140, fontWeight: 700 }}>Submitted Date</TableCell>
+              <TableCell sx={{ width: 120, fontWeight: 700 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -249,13 +249,13 @@ export const ApprovalsPage = () => {
             ) : (
               filteredTimesheets.map((timesheet) => (
                 <TableRow key={timesheet._id}>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {timesheet.userId?.firstName} {timesheet.userId?.lastName}
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {moment().month(timesheet.month - 1).format('MMMM')} {timesheet.year}
                   </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                     {timesheet.projectId?.projectName || 'N/A'}
                   </TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>

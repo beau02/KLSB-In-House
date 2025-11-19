@@ -39,8 +39,7 @@ export const ProjectCostingPage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
@@ -82,8 +81,13 @@ export const ProjectCostingPage = () => {
     try {
       setLoading(true);
       const params = {};
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
+      if (selectedMonth) {
+        const [year, month] = selectedMonth.split('-');
+        if (year && month) {
+          params.year = parseInt(year, 10);
+          params.month = parseInt(month, 10);
+        }
+      }
 
       const response = await api.get(`/costing/project/${selectedProject}`, { params });
       setProjectDetails(response.data);
@@ -262,19 +266,12 @@ export const ProjectCostingPage = () => {
         </FormControl>
 
         <TextField
-          label="Start Date"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          label="Month"
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
           InputLabelProps={{ shrink: true }}
-        />
-
-        <TextField
-          label="End Date"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: 200 }}
         />
 
 
