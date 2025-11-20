@@ -178,13 +178,22 @@ export const StaffManagementPage = () => {
       }
 
       console.log('Submitting staff update:', submitData);
+      
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
       if (selectedStaff) {
         await userService.update(selectedStaff._id, submitData);
       } else {
         await userService.create(submitData);
       }
       handleCloseDialog();
-      loadStaff();
+      await loadStaff();
+      
+      // Restore scroll position after data loads
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY);
+      });
     } catch (error) {
       console.error('Error saving staff:', error);
       alert(error.response?.data?.message || 'Error saving staff member');
@@ -198,9 +207,17 @@ export const StaffManagementPage = () => {
       // Second click - permanent delete
       if (window.confirm('⚠️ WARNING: This will PERMANENTLY delete this staff member and cannot be undone. Are you sure?')) {
         try {
+          // Save current scroll position
+          const scrollY = window.scrollY;
+          
           await userService.permanentDelete(staffMember._id);
           alert('Staff member permanently deleted');
-          loadStaff();
+          await loadStaff();
+          
+          // Restore scroll position
+          requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+          });
         } catch (error) {
           console.error('Error permanently deleting staff:', error);
           alert(error.response?.data?.message || 'Error permanently deleting staff member');
@@ -210,9 +227,17 @@ export const StaffManagementPage = () => {
       // First click - set to inactive
       if (window.confirm('This will deactivate the staff member. Click delete again to permanently remove.')) {
         try {
+          // Save current scroll position
+          const scrollY = window.scrollY;
+          
           await userService.delete(staffMember._id);
           alert('Staff member deactivated');
-          loadStaff();
+          await loadStaff();
+          
+          // Restore scroll position
+          requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+          });
         } catch (error) {
           console.error('Error deactivating staff:', error);
           alert(error.response?.data?.message || 'Error deactivating staff member');
@@ -447,14 +472,31 @@ export const StaffManagementPage = () => {
             />
           </Box>
 
-          <Box>
-            <Button
-              variant="text"
-              onClick={() => { setEmployeeNoFilter(''); setNameFilter(''); }}
-              sx={{ color: 'text.secondary' }}
-            >
-              Clear
-            </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ textAlign: 'right', mr: 1 }}>
+              { (employeeNoFilter || nameFilter) ? (
+                <>
+                  <Typography variant="caption" color="text.secondary">Showing</Typography>
+                  <Typography variant="h6" sx={{ ml: 0.5 }}>{staff.length}</Typography>
+                  <Typography variant="caption" color="text.secondary">of {allStaff.length}</Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="caption" color="text.secondary">Total users</Typography>
+                  <Typography variant="h6">{allStaff.length}</Typography>
+                </>
+              )}
+            </Box>
+
+            <Box>
+              <Button
+                variant="text"
+                onClick={() => { setEmployeeNoFilter(''); setNameFilter(''); }}
+                sx={{ color: 'text.secondary' }}
+              >
+                Clear
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Box>
