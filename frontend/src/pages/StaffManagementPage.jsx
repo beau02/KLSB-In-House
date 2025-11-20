@@ -35,6 +35,7 @@ import { useAuth } from '../contexts/AuthContext';
 export const StaffManagementPage = () => {
   const { isAdmin, isEmployee } = useAuth();
   const [staff, setStaff] = useState([]);
+  const [allStaff, setAllStaff] = useState([]); // Store all staff for client-side filtering
   const [loading, setLoading] = useState(true);
   const [nameFilter, setNameFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,12 +60,10 @@ export const StaffManagementPage = () => {
   const loadStaff = async () => {
     try {
       setLoading(true);
-      const params = {};
-      if (nameFilter && nameFilter.trim() !== '') params.name = nameFilter.trim();
-      console.log('Loading staff with params:', params);
-      const response = await userService.getAll(params);
-      console.log('Staff load response:', response?.count, response?.users?.length);
-      setStaff(response.users || []);
+      const response = await userService.getAll();
+      const users = response.users || [];
+      setAllStaff(users);
+      setStaff(users); // Initially show all
     } catch (error) {
       console.error('Error loading staff:', error);
     } finally {
@@ -72,17 +71,28 @@ export const StaffManagementPage = () => {
     }
   };
 
-  // Debounced live search: call loadStaff 400ms after typing stops
-  const searchTimerRef = useRef(null);
+  // Client-side filtering - no server reload
   useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      loadStaff();
-    }, 400);
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
-  }, [nameFilter]);
+    if (!nameFilter || nameFilter.trim() === '') {
+      setStaff(allStaff);
+      return;
+    }
+    
+    const searchTerm = nameFilter.toLowerCase().trim();
+    const filtered = allStaff.filter(s => {
+      const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+      const email = (s.email || '').toLowerCase();
+      const empNo = (s.employeeNo || '').toLowerCase();
+      const designation = (s.designation || '').toLowerCase();
+      
+      return fullName.includes(searchTerm) ||
+             email.includes(searchTerm) ||
+             empNo.includes(searchTerm) ||
+             designation.includes(searchTerm);
+    });
+    
+    setStaff(filtered);
+  }, [nameFilter, allStaff]);
 
   const handleOpenDialog = (staffMember = null) => {
     if (staffMember) {
@@ -342,19 +352,26 @@ export const StaffManagementPage = () => {
         <Box sx={{ ml: 2, minWidth: 320 }}>
           <TextField
             fullWidth
-            label="Search employee name"
+            label="Search staff"
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') loadStaff(); }}
-            placeholder="Type first or last name and press Enter"
+            placeholder="Name, email, employee no, designation..."
             size="small"
             InputProps={{
-              endAdornment: (
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+              endAdornment: nameFilter && (
                 <InputAdornment position="end">
-                  <Search sx={{ mr: 1, cursor: 'pointer' }} onClick={loadStaff} />
-                  {nameFilter && (
-                    <Close sx={{ cursor: 'pointer' }} onClick={() => { setNameFilter(''); loadStaff(); }} />
-                  )}
+                  <IconButton
+                    size="small"
+                    onClick={() => setNameFilter('')}
+                    edge="end"
+                  >
+                    <Close />
+                  </IconButton>
                 </InputAdornment>
               )
             }}

@@ -16,23 +16,23 @@ exports.getAllUsers = async (req, res) => {
       const raw = String(name).trim();
       const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
       const escaped = escapeRegex(raw);
-      // anchored, case-insensitive exact match
-      const exact = new RegExp(`^${escaped}$`, 'i');
+      // Case-insensitive partial match (contains)
+      const partial = new RegExp(escaped, 'i');
 
       const or = [
-        { firstName: exact },
-        { lastName: exact },
-        { email: exact },
-        { employeeNo: exact }
+        { firstName: partial },
+        { lastName: partial },
+        { email: partial },
+        { employeeNo: partial }
       ];
 
-      // If user entered a full name (contains space), try matching first+last exactly
+      // If user entered a full name (contains space), try matching first+last
       const parts = raw.split(/\s+/).filter(Boolean);
       if (parts.length >= 2) {
         const first = escapeRegex(parts[0]);
         const last = escapeRegex(parts[parts.length - 1]);
-        const firstRegex = new RegExp(`^${first}$`, 'i');
-        const lastRegex = new RegExp(`^${last}$`, 'i');
+        const firstRegex = new RegExp(first, 'i');
+        const lastRegex = new RegExp(last, 'i');
         or.push({ $and: [ { firstName: firstRegex }, { lastName: lastRegex } ] });
       }
 
