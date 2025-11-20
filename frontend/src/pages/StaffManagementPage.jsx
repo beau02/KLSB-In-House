@@ -38,6 +38,7 @@ export const StaffManagementPage = () => {
   const [allStaff, setAllStaff] = useState([]); // Store all staff for client-side filtering
   const [loading, setLoading] = useState(true);
   const [nameFilter, setNameFilter] = useState('');
+  const [employeeNoFilter, setEmployeeNoFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [formData, setFormData] = useState({
@@ -95,44 +96,37 @@ export const StaffManagementPage = () => {
 
   // Client-side filtering - no server reload
   useEffect(() => {
-    if (!nameFilter || nameFilter.trim() === '') {
-      setStaff(allStaff);
-      return;
+    let filtered = allStaff;
+    
+    // Filter by employee number
+    if (employeeNoFilter && employeeNoFilter.trim() !== '') {
+      const empSearch = employeeNoFilter.trim().toLowerCase();
+      filtered = filtered.filter(s => {
+        const empNo = (s.employeeNo || '').toLowerCase();
+        return empNo.includes(empSearch);
+      });
     }
     
-    const searchTerm = nameFilter.trim();
-    const searchLower = searchTerm.toLowerCase();
-    
-    const filtered = allStaff.filter(s => {
-      const empNo = (s.employeeNo || '');
-      const empNoLower = empNo.toLowerCase();
-      
-      // If search term looks like it might be an employee number (contains KL, numbers, dashes)
-      // prioritize employee number matching
-      const isEmpNoSearch = /^[A-Z]{2}/.test(searchTerm.toUpperCase());
-      
-      if (isEmpNoSearch) {
-        // For employee number searches, match from start or exact match
-        return empNoLower.startsWith(searchLower) || empNoLower === searchLower;
-      }
-      
-      // Otherwise search all fields
-      const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
-      const email = (s.email || '').toLowerCase();
-      const designation = (s.designation || '').toLowerCase();
-      const department = (s.department || '').toLowerCase();
-      const contactNo = (s.contactNo || '').toLowerCase();
-      
-      return fullName.includes(searchLower) ||
-             email.includes(searchLower) ||
-             empNoLower.includes(searchLower) ||
-             designation.includes(searchLower) ||
-             department.includes(searchLower) ||
-             contactNo.includes(searchLower);
-    });
+    // Filter by name
+    if (nameFilter && nameFilter.trim() !== '') {
+      const nameSearch = nameFilter.trim().toLowerCase();
+      filtered = filtered.filter(s => {
+        const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+        const email = (s.email || '').toLowerCase();
+        const designation = (s.designation || '').toLowerCase();
+        const department = (s.department || '').toLowerCase();
+        const contactNo = (s.contactNo || '').toLowerCase();
+        
+        return fullName.includes(nameSearch) ||
+               email.includes(nameSearch) ||
+               designation.includes(nameSearch) ||
+               department.includes(nameSearch) ||
+               contactNo.includes(nameSearch);
+      });
+    }
     
     setStaff(filtered);
-  }, [nameFilter, allStaff]);
+  }, [nameFilter, employeeNoFilter, allStaff]);
 
   const handleOpenDialog = (staffMember = null) => {
     if (staffMember) {
@@ -373,50 +367,96 @@ export const StaffManagementPage = () => {
         </Grid>
       </Grid>
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        {!isEmployee && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => handleOpenDialog()}
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
-              }
-            }}
-          >
-            Add Staff
-          </Button>
-        )}
-        <Box sx={{ ml: 2, minWidth: 320 }}>
-          <TextField
-            fullWidth
-            label="Search staff"
-            value={nameFilter}
-            onChange={(e) => setNameFilter(e.target.value)}
-            placeholder="Name, email, employee no, designation..."
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-              endAdornment: nameFilter && (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    onClick={() => setNameFilter('')}
-                    edge="end"
-                  >
-                    <Close />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
-          />
-        </Box>
+      <Box sx={{ mb: 3 }}>
+        <Paper
+          elevation={2}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            p: 1,
+            borderRadius: 2,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {!isEmployee && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => handleOpenDialog()}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5568d3 0%, #65408b 100%)',
+                  }
+                }}
+              >
+                Add Staff
+              </Button>
+            )}
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 2, flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              variant="outlined"
+              size="small"
+              label="Employee No"
+              value={employeeNoFilter}
+              onChange={(e) => setEmployeeNoFilter(e.target.value)}
+              placeholder="KL-22-089"
+              sx={{ minWidth: 220, maxWidth: 360, flex: '1 1 320px', borderRadius: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: employeeNoFilter ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setEmployeeNoFilter('')}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
+              }}
+            />
+
+            <TextField
+              variant="outlined"
+              size="small"
+              label="Name / Email / Designation"
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              placeholder="Search by name, email or role"
+              sx={{ minWidth: 220, flex: '2 1 420px', borderRadius: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: nameFilter ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setNameFilter('')}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Button
+              variant="text"
+              onClick={() => { setEmployeeNoFilter(''); setNameFilter(''); }}
+              sx={{ color: 'text.secondary' }}
+            >
+              Clear
+            </Button>
+          </Box>
+        </Paper>
       </Box>
 
       <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflowX: 'auto' }}>
