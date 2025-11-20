@@ -67,6 +67,13 @@ export const userService = {
   }
 };
 
+export const departmentService = {
+  getAll: async () => {
+    const response = await api.get('/departments');
+    return response.data;
+  }
+};
+
 export const projectService = {
   getAll: async (params) => {
     const response = await api.get('/projects', { params });
