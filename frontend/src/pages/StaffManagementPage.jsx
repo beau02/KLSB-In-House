@@ -78,17 +78,35 @@ export const StaffManagementPage = () => {
       return;
     }
     
-    const searchTerm = nameFilter.toLowerCase().trim();
+    const searchTerm = nameFilter.trim();
+    const searchLower = searchTerm.toLowerCase();
+    
     const filtered = allStaff.filter(s => {
+      const empNo = (s.employeeNo || '');
+      const empNoLower = empNo.toLowerCase();
+      
+      // If search term looks like it might be an employee number (contains KL, numbers, dashes)
+      // prioritize employee number matching
+      const isEmpNoSearch = /^[A-Z]{2}/.test(searchTerm.toUpperCase());
+      
+      if (isEmpNoSearch) {
+        // For employee number searches, match from start or exact match
+        return empNoLower.startsWith(searchLower) || empNoLower === searchLower;
+      }
+      
+      // Otherwise search all fields
       const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
       const email = (s.email || '').toLowerCase();
-      const empNo = (s.employeeNo || '').toLowerCase();
       const designation = (s.designation || '').toLowerCase();
+      const department = (s.department || '').toLowerCase();
+      const contactNo = (s.contactNo || '').toLowerCase();
       
-      return fullName.includes(searchTerm) ||
-             email.includes(searchTerm) ||
-             empNo.includes(searchTerm) ||
-             designation.includes(searchTerm);
+      return fullName.includes(searchLower) ||
+             email.includes(searchLower) ||
+             empNoLower.includes(searchLower) ||
+             designation.includes(searchLower) ||
+             department.includes(searchLower) ||
+             contactNo.includes(searchLower);
     });
     
     setStaff(filtered);
