@@ -29,7 +29,7 @@ import {
   Divider
 } from '@mui/material';
 import { Add, Edit, Delete, AdminPanelSettings, Person, ManageAccounts, Search, Close } from '@mui/icons-material';
-import { userService } from '../services';
+import { userService, departmentService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
 export const StaffManagementPage = () => {
@@ -51,6 +51,28 @@ export const StaffManagementPage = () => {
     role: 'employee',
     status: 'active'
   });
+
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const res = await departmentService.getAll();
+        // normalize department names to uppercase for consistent display/storage
+        setDepartments((res.departments || []).map(d => ({
+          ...d,
+          name: (d.name || d.label || d.value || '').toString().toUpperCase()
+        })));
+      } catch (err) {
+        console.error('Failed to load departments:', err);
+        // fallback to a minimal list if backend not available
+        setDepartments([
+          { id: 'engineering', name: 'ENGINEERING DEPARTMENT' }
+        ]);
+      }
+    };
+    loadDepartments();
+  }, []);
 
   useEffect(() => {
     loadStaff();
@@ -95,7 +117,7 @@ export const StaffManagementPage = () => {
         employeeNo: staffMember.employeeNo || '',
         designation: staffMember.designation || '',
         contactNo: staffMember.contactNo || '',
-        department: staffMember.department || '',
+        department: staffMember.department ? staffMember.department.toString().toUpperCase() : '',
         role: staffMember.role,
         status: staffMember.status,
         hourlyRate: staffMember.hourlyRate || 0
@@ -399,7 +421,7 @@ export const StaffManagementPage = () => {
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department || '-'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department ? member.department.toString().toUpperCase() : '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.email}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{getRoleChip(member.role)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{getStatusChip(member.status)}</TableCell>
@@ -494,12 +516,20 @@ export const StaffManagementPage = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                select
                 fullWidth
                 label="Department"
                 value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, department: (e.target.value || '').toString().toUpperCase() })}
                 placeholder="e.g., Engineering Department"
-              />
+              >
+                <MenuItem value="">NONE</MenuItem>
+                {departments.map((d) => (
+                  <MenuItem key={d.id || d.value || d.name} value={(d.name || d.label || d.value).toString().toUpperCase()}>
+                    {(d.name || d.label || d.value).toString().toUpperCase()}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
