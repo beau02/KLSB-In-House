@@ -535,7 +535,7 @@ export const StaffManagementPage = () => {
                 >
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.employeeNo || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName} ${member.lastName}`}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName}, ${member.lastName}`}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
                   <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department ? member.department.toString().toUpperCase() : '-'}</TableCell>
