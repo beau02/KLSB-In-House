@@ -54,6 +54,11 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Warn if JWT_SECRET is missing — helpful during development
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET is not set. Authentication tokens will fail. Set JWT_SECRET in backend/.env');
+}
+
 
 // Global error handlers for silent crashes
 process.on('unhandledRejection', (reason, promise) => {
