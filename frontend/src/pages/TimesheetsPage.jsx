@@ -349,18 +349,18 @@ export const TimesheetsPage = () => {
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto', boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.08)', sm: '0 4px 20px rgba(0,0,0,0.08)' } }}>
+        <Table sx={{ minWidth: { xs: 800, md: 'unset' } }}>
           <TableHead>
-            <TableRow>
-              <TableCell>Period</TableCell>
-              <TableCell>Project</TableCell>
-              <TableCell>Normal Hours</TableCell>
-              <TableCell>OT Hours</TableCell>
-              <TableCell>Total Hours</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Submitted Date</TableCell>
-              <TableCell>Actions</TableCell>
+            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Period</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Project</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Normal Hours</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>OT Hours</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Total Hours</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Submitted Date</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -411,11 +411,11 @@ export const TimesheetsPage = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg" fullWidth>
-        <DialogTitle>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg" fullWidth sx={{ '& .MuiDialog-paper': { m: { xs: 1, sm: 2 }, maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' }, width: { xs: 'calc(100% - 16px)', sm: '100%' } } }}>
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' }, py: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 3 } }}>
           {selectedTimesheet ? 'View/Edit Timesheet' : 'Create New Timesheet'}
           {selectedTimesheet && (
-            <Typography variant="caption" display="block" color="textSecondary">
+            <Typography variant="caption" display="block" color="textSecondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
               Status: {getStatusChip(selectedTimesheet.status)}
               {selectedTimesheet.resubmissionCount > 0 && (
                 <> • Resubmitted {selectedTimesheet.resubmissionCount} time(s)</>
@@ -423,19 +423,19 @@ export const TimesheetsPage = () => {
             </Typography>
           )}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
           {selectedTimesheet?.rejectionReason && (
-            <Paper sx={{ p: 2, mb: 2, bgcolor: '#fef2f2', border: '1px solid #fecaca' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#dc2626', mb: 1 }}>
+            <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, bgcolor: '#fef2f2', border: '1px solid #fecaca' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#dc2626', mb: 1, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                 ⚠️ Rejection Reason:
               </Typography>
-              <Typography variant="body2" sx={{ color: '#991b1b' }}>
+              <Typography variant="body2" sx={{ color: '#991b1b', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                 {selectedTimesheet.rejectionReason}
               </Typography>
             </Paper>
           )}
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 select
                 fullWidth
@@ -453,7 +453,7 @@ export const TimesheetsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 select
                 fullWidth
@@ -471,7 +471,7 @@ export const TimesheetsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 select
                 fullWidth
@@ -489,7 +489,7 @@ export const TimesheetsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 fullWidth
                 type="number"
@@ -503,14 +503,14 @@ export const TimesheetsPage = () => {
             </Grid>
           </Grid>
 
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ mt: { xs: 2, sm: 3 } }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Daily Hours Entry - {moment().month(formData.month - 1).format('MMMM')} {formData.year}
             </Typography>
             <Card variant="outlined">
-              <CardContent>
-                  <TableContainer sx={{ maxHeight: 400, overflowX: 'auto' }}>
-                  <Table size="small" stickyHeader sx={{ minWidth: 900 }}>
+              <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
+                  <TableContainer sx={{ maxHeight: { xs: 350, sm: 400 }, overflowX: 'auto' }}>
+                  <Table size="small" stickyHeader sx={{ minWidth: { xs: 750, sm: 900 } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell width="10%"><strong>Date</strong></TableCell>

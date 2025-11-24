@@ -26,7 +26,10 @@ import {
   CardContent,
   Avatar,
   Stack,
-  Divider
+  Divider,
+  useTheme,
+  useMediaQuery,
+  Pagination
 } from '@mui/material';
 import { Add, Edit, Delete, AdminPanelSettings, Person, ManageAccounts, Search, Close } from '@mui/icons-material';
 import { userService, departmentService } from '../services';
@@ -34,6 +37,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const StaffManagementPage = () => {
   const { isAdmin, isEmployee } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [staff, setStaff] = useState([]);
   const [allStaff, setAllStaff] = useState([]); // Store all staff for client-side filtering
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,8 @@ export const StaffManagementPage = () => {
     role: 'employee',
     status: 'active'
   });
+  const [page, setPage] = useState(1);
+  const [rowsPerPage] = useState(25);
 
   const [departments, setDepartments] = useState([]);
 
@@ -93,6 +100,15 @@ export const StaffManagementPage = () => {
       setLoading(false);
     }
   };
+
+  // Calculate paginated staff
+  const totalPages = Math.ceil(staff.length / rowsPerPage);
+  const paginatedStaff = staff.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [employeeNoFilter, nameFilter]);
 
   // Client-side filtering - no server reload
   useEffect(() => {
@@ -397,19 +413,22 @@ export const StaffManagementPage = () => {
           elevation={2}
           sx={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: 1,
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'stretch', md: 'center' },
+            gap: { xs: 1.5, md: 2 },
+            p: { xs: 1.5, sm: 2 },
             borderRadius: 2,
             backgroundColor: 'background.paper'
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {!isEmployee && (
+          {/* Add Staff Button - Full width on mobile */}
+          {!isEmployee && (
+            <Box sx={{ width: { xs: '100%', md: 'auto' } }}>
               <Button
                 variant="contained"
                 startIcon={<Add />}
                 onClick={() => handleOpenDialog()}
+                fullWidth={isMobile}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   '&:hover': {
@@ -419,10 +438,16 @@ export const StaffManagementPage = () => {
               >
                 Add Staff
               </Button>
-            )}
-          </Box>
+            </Box>
+          )}
 
-          <Box sx={{ display: 'flex', gap: 2, flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Search Fields - Stack on mobile */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 1.5, md: 2 }, 
+            flex: 1
+          }}>
             <TextField
               variant="outlined"
               size="small"
@@ -430,7 +455,9 @@ export const StaffManagementPage = () => {
               value={employeeNoFilter}
               onChange={(e) => setEmployeeNoFilter(e.target.value)}
               placeholder="KL-22-089"
-              sx={{ minWidth: 220, maxWidth: 360, flex: '1 1 320px', borderRadius: 2 }}
+              sx={{ 
+                flex: { xs: '1', md: '1 1 320px' }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -454,7 +481,9 @@ export const StaffManagementPage = () => {
               value={nameFilter}
               onChange={(e) => setNameFilter(e.target.value)}
               placeholder="Search by name, email or role"
-              sx={{ minWidth: 220, flex: '2 1 420px', borderRadius: 2 }}
+              sx={{ 
+                flex: { xs: '1', md: '2 1 420px' }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -472,27 +501,40 @@ export const StaffManagementPage = () => {
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ textAlign: 'right', mr: 1 }}>
+          {/* Result Count and Clear - Side by side on all screens */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            gap: 1.5,
+            minWidth: { xs: 'auto', md: 'fit-content' }
+          }}>
+            <Box sx={{ textAlign: 'left' }}>
               { (employeeNoFilter || nameFilter) ? (
-                <>
-                  <Typography variant="caption" color="text.secondary">Showing</Typography>
-                  <Typography variant="h6" sx={{ ml: 0.5 }}>{staff.length}</Typography>
-                  <Typography variant="caption" color="text.secondary">of {allStaff.length}</Typography>
-                </>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>Showing</Typography>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, lineHeight: 1.2 }}>{staff.length}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>of {allStaff.length}</Typography>
+                </Box>
               ) : (
-                <>
-                  <Typography variant="caption" color="text.secondary">Total users</Typography>
-                  <Typography variant="h6">{allStaff.length}</Typography>
-                </>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, display: 'block' }}>Total users</Typography>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, lineHeight: 1.2 }}>{allStaff.length}</Typography>
+                </Box>
               )}
             </Box>
 
             <Box>
               <Button
                 variant="text"
+                size="small"
                 onClick={() => { setEmployeeNoFilter(''); setNameFilter(''); }}
-                sx={{ color: 'text.secondary' }}
+                sx={{ 
+                  color: 'text.secondary', 
+                  minWidth: 'auto',
+                  px: { xs: 1.5, sm: 2 },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                }}
               >
                 Clear
               </Button>
@@ -501,90 +543,231 @@ export const StaffManagementPage = () => {
         </Paper>
       </Box>
 
-      <TableContainer component={Paper} sx={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflowX: 'auto' }}>
-        <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
-              <TableCell sx={{ width: 180, fontWeight: 700 }}>Employee No</TableCell>
-              <TableCell sx={{ width: 120, fontWeight: 700 }}>Hourly Rate</TableCell>
-              <TableCell sx={{ width: 200, fontWeight: 700 }}>Name</TableCell>
-              <TableCell sx={{ width: 160, fontWeight: 700 }}>Designation</TableCell>
-              <TableCell sx={{ width: 130, fontWeight: 700 }}>Contact No.</TableCell>
-              <TableCell sx={{ width: 160, fontWeight: 700 }}>Department</TableCell>
-              <TableCell sx={{ width: 240, fontWeight: 700 }}>Email</TableCell>
-              <TableCell sx={{ width: 120, fontWeight: 700 }}>Role</TableCell>
-              <TableCell sx={{ width: 100, fontWeight: 700 }}>Status</TableCell>
-              {!isEmployee && <TableCell sx={{ width: 110, fontWeight: 700 }}>Actions</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {staff.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={isEmployee ? 8 : 9} align="center">
-                  No staff members found
-                </TableCell>
-              </TableRow>
-            ) : (
-              staff.map((member) => (
-                <TableRow 
-                  key={member._id}
-                  sx={{ 
-                    '&:hover': { bgcolor: '#f8f9fa' },
-                    transition: 'background-color 0.2s'
-                  }}
-                >
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.employeeNo || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName}, ${member.lastName}`}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department ? member.department.toString().toUpperCase() : '-'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.email}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{getRoleChip(member.role)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{getStatusChip(member.status)}</TableCell>
-                  {!isEmployee && (
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleOpenDialog(member)}
-                        sx={{ 
-                          color: '#1976d2',
-                          '&:hover': { bgcolor: '#e3f2fd' }
-                        }}
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color={member.status === 'inactive' ? 'error' : 'warning'}
-                        onClick={() => handleDelete(member)}
-                        title={member.status === 'inactive' ? 'Permanently Delete' : 'Deactivate'}
-                        sx={{ 
-                          '&:hover': { 
-                            bgcolor: member.status === 'inactive' ? '#ffebee' : '#fff8e1' 
-                          }
-                        }}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Mobile Card Layout */}
+      {isMobile ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {paginatedStaff.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography color="textSecondary">No staff members found</Typography>
+            </Paper>
+          ) : (
+            paginatedStaff.map((member) => (
+              <Card 
+                key={member._id}
+                sx={{ 
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  borderRadius: 2,
+                  border: '1px solid #e0e0e0'
+                }}
+              >
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mb: 0.5 }}>
+                        {`${member.firstName} ${member.lastName}`}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
+                        {member.designation || 'No designation'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {getRoleChip(member.role)}
+                      {getStatusChip(member.status)}
+                    </Box>
+                  </Box>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+                  <Divider sx={{ my: 1.5 }} />
+
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                        Employee No
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                        {member.employeeNo || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                        Hourly Rate
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                        {new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                        Contact
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                        {member.contactNo || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                        Department
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                        {member.department ? member.department.toString().toUpperCase() : '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                        Email
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem', wordBreak: 'break-word' }}>
+                        {member.email}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+
+                  {!isEmployee && (
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2, pt: 1.5, borderTop: '1px solid #e0e0e0' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Edit />}
+                        onClick={() => handleOpenDialog(member)}
+                        fullWidth
+                        sx={{ 
+                          fontSize: '0.8rem',
+                          textTransform: 'none',
+                          borderColor: '#1976d2',
+                          color: '#1976d2'
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Delete />}
+                        onClick={() => handleDelete(member)}
+                        fullWidth
+                        color={member.status === 'inactive' ? 'error' : 'warning'}
+                        sx={{ 
+                          fontSize: '0.8rem',
+                          textTransform: 'none'
+                        }}
+                      >
+                        {member.status === 'inactive' ? 'Delete' : 'Deactivate'}
+                      </Button>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Box>
+      ) : (
+        /* Desktop Table Layout */
+        <TableContainer component={Paper} sx={{ boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.08)', sm: '0 4px 20px rgba(0,0,0,0.08)' }, overflowX: 'auto' }}>
+          <Table sx={{ minWidth: { xs: 1200, md: '100%' }, tableLayout: { xs: 'auto', md: 'fixed' } }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+                <TableCell sx={{ width: { md: 180 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Employee No</TableCell>
+                <TableCell sx={{ width: { md: 120 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Hourly Rate</TableCell>
+                <TableCell sx={{ width: { md: 200 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Name</TableCell>
+                <TableCell sx={{ width: { md: 160 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Designation</TableCell>
+                <TableCell sx={{ width: { md: 130 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Contact No.</TableCell>
+                <TableCell sx={{ width: { md: 160 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Department</TableCell>
+                <TableCell sx={{ width: { md: 240 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Email</TableCell>
+                <TableCell sx={{ width: { md: 120 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Role</TableCell>
+                <TableCell sx={{ width: { md: 100 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Status</TableCell>
+                {!isEmployee && <TableCell sx={{ width: { md: 110 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Actions</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedStaff.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={isEmployee ? 8 : 9} align="center">
+                    No staff members found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedStaff.map((member) => (
+                  <TableRow 
+                    key={member._id}
+                    sx={{ 
+                      '&:hover': { bgcolor: '#f8f9fa' },
+                      transition: 'background-color 0.2s'
+                    }}
+                  >
+                    <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.employeeNo || '-'}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName}, ${member.lastName}`}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.department ? member.department.toString().toUpperCase() : '-'}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.email}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{getRoleChip(member.role)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{getStatusChip(member.status)}</TableCell>
+                    {!isEmployee && (
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleOpenDialog(member)}
+                          sx={{ 
+                            color: '#1976d2',
+                            '&:hover': { bgcolor: '#e3f2fd' }
+                          }}
+                        >
+                          <Edit />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          color={member.status === 'inactive' ? 'error' : 'warning'}
+                          onClick={() => handleDelete(member)}
+                          title={member.status === 'inactive' ? 'Permanently Delete' : 'Deactivate'}
+                          sx={{ 
+                            '&:hover': { 
+                              bgcolor: member.status === 'inactive' ? '#ffebee' : '#fff8e1' 
+                            }
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Pagination */}
+      {staff.length > 0 && totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination 
+            count={totalPages}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            size={isMobile ? 'medium' : 'large'}
+            showFirstButton
+            showLastButton
+            sx={{
+              '& .MuiPaginationItem-root': {
+                fontSize: { xs: '0.85rem', sm: '0.95rem' }
+              }
+            }}
+          />
+        </Box>
+      )}
+
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth fullScreen={false} sx={{ '& .MuiDialog-paper': { m: { xs: 1, sm: 2 }, maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' } } }}>
         <DialogTitle sx={{ 
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
-          fontWeight: 700
+          fontWeight: 700,
+          fontSize: { xs: '1.1rem', sm: '1.25rem' },
+          py: { xs: 1.5, sm: 2 }
         }}>
           {selectedStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: { xs: 1, sm: 2 }, px: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField

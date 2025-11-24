@@ -56,23 +56,20 @@ export const LoginPage = () => {
             backdropFilter: 'blur(10px)',
           }}
         >
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 800, 
-                color: '#030C69',
-                mb: 1,
-                letterSpacing: '-1px',
-              }}
-            >
-              KLSB
-            </Typography>
+          <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
+            <Box sx={{ mb: { xs: 1.5, sm: 2 }, display: 'flex', justifyContent: 'center' }}>
+              <img 
+                src="/static/KLSB Diamond 1 .png" 
+                alt="KLSB Logo" 
+                style={{ height: '80px', width: 'auto', maxWidth: '90%' }}
+              />
+            </Box>
             <Typography 
               variant="h6" 
               sx={{ 
                 color: '#546e7a',
                 fontWeight: 500,
+                fontSize: { xs: '1rem', sm: '1.25rem' }
               }}
             >
               Timesheet Management System
