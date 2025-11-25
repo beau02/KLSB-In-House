@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, SafeAreaView, Dimensions } from 'react-native';
 import { Card, Text, Button, Chip } from 'react-native-paper';
 import { useAuth } from '../contexts/AuthContext';
 import { timesheetService, projectService } from '../services';
+
+const { width } = Dimensions.get('window');
 
 export const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -52,12 +54,13 @@ export const DashboardScreen = ({ navigation }) => {
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadDashboardData} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadDashboardData} />
+        }
+      >
       <Card style={styles.welcomeCard}>
         <Card.Content>
           <Text variant="headlineSmall">
@@ -113,17 +116,22 @@ export const DashboardScreen = ({ navigation }) => {
           </Button>
         </Card.Content>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  container: {
+    flex: 1,
+  },
   welcomeCard: {
-    margin: 16,
+    marginHorizontal: '4%',
+    marginVertical: 12,
   },
   subtitle: {
     marginTop: 8,
@@ -132,21 +140,26 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
+    paddingHorizontal: '2%',
+    paddingVertical: 8,
   },
   statCard: {
-    width: '47%',
-    margin: '1.5%',
+    width: width < 400 ? '96%' : '47%',
+    marginHorizontal: '1.5%',
+    marginVertical: 6,
   },
   statTitle: {
     color: '#666',
     marginBottom: 8,
+    fontSize: width < 350 ? 12 : 14,
   },
   statValue: {
     fontWeight: 'bold',
   },
   actionsCard: {
-    margin: 16,
+    marginHorizontal: '4%',
+    marginVertical: 12,
+    marginBottom: 20,
   },
   actionsTitle: {
     marginBottom: 16,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
 import { Card, Text, Chip } from 'react-native-paper';
 import moment from 'moment';
 import { projectService } from '../services';
@@ -35,12 +35,14 @@ export const ProjectsScreen = () => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadProjects} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadProjects} />
+        }
+      >
       {projects.length === 0 ? (
         <Card style={styles.emptyCard}>
           <Card.Content>
@@ -80,20 +82,29 @@ export const ProjectsScreen = () => {
           </Card>
         ))
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 16,
+  },
   card: {
-    margin: 8,
+    marginHorizontal: '3%',
+    marginVertical: 6,
   },
   emptyCard: {
-    margin: 16,
+    marginHorizontal: '4%',
+    marginVertical: 16,
   },
   emptyText: {
     textAlign: 'center',
@@ -104,10 +115,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   projectName: {
     fontWeight: 'bold',
     marginTop: 4,
+    flexShrink: 1,
   },
   description: {
     marginTop: 8,

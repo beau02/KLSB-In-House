@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Card, Text, ActivityIndicator, Chip } from 'react-native-paper';
 import moment from 'moment';
 import { timesheetService } from '../services';
+
+const { width } = Dimensions.get('window');
 
 export const TimesheetDetailScreen = ({ route, navigation }) => {
   const { id } = route.params;
@@ -59,9 +61,11 @@ export const TimesheetDetailScreen = ({ route, navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -71,7 +75,12 @@ export const TimesheetDetailScreen = ({ route, navigation }) => {
   const isEditable = timesheet.status === 'draft';
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Card style={styles.card}>
         <Card.Content>
           <View style={styles.headerRow}>
@@ -103,47 +112,50 @@ export const TimesheetDetailScreen = ({ route, navigation }) => {
             const isWeekend = entryDate.day() === 0 || entryDate.day() === 6;
             return (
               <View key={index} style={[styles.dayRow, isWeekend && styles.weekendRow]}>
-                <View style={styles.dateColumn}>
-                  <Text variant="titleMedium">{entryDate.format('DD')}</Text>
-                  <Text variant="bodySmall" style={isWeekend ? styles.weekendText : null}>
-                    {entryDate.format('ddd')}
-                  </Text>
-                </View>
-                <View style={styles.hoursColumn}>
-                  <TextInput
-                    mode="outlined"
-                    value={entry.normalHours.toString()}
-                    onChangeText={(text) => handleEntryChange(index, 'normalHours', parseFloat(text) || 0)}
-                    keyboardType="decimal-pad"
-                    dense
-                    disabled={!isEditable}
-                    placeholder="Normal"
-                    style={styles.hoursInput}
-                  />
-                </View>
-                <View style={styles.otColumn}>
-                  <TextInput
-                    mode="outlined"
-                    value={entry.otHours.toString()}
-                    onChangeText={(text) => handleEntryChange(index, 'otHours', parseFloat(text) || 0)}
-                    keyboardType="decimal-pad"
-                    dense
-                    disabled={!isEditable}
-                    placeholder="OT"
-                    style={styles.hoursInput}
-                  />
-                </View>
-                <View style={styles.descColumn}>
-                  <TextInput
-                    mode="outlined"
-                    value={entry.description}
-                    onChangeText={(text) => handleEntryChange(index, 'description', text)}
-                    placeholder="Description"
-                    dense
-                    disabled={!isEditable}
-                    style={styles.descInput}
-                  />
-                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayRowScroll}>
+                  <View style={styles.dateColumn}>
+                    <Text variant="titleMedium">{entryDate.format('DD')}</Text>
+                    <Text variant="bodySmall" style={isWeekend ? styles.weekendText : null}>
+                      {entryDate.format('ddd')}
+                    </Text>
+                  </View>
+                  <View style={styles.hoursColumn}>
+                    <TextInput
+                      mode="outlined"
+                      value={entry.normalHours.toString()}
+                      onChangeText={(text) => handleEntryChange(index, 'normalHours', parseFloat(text) || 0)}
+                      keyboardType="decimal-pad"
+                      dense
+                      disabled={!isEditable}
+                      placeholder="Normal"
+                      style={styles.hoursInput}
+                    />
+                  </View>
+                  <View style={styles.otColumn}>
+                    <TextInput
+                      mode="outlined"
+                      value={entry.otHours.toString()}
+                      onChangeText={(text) => handleEntryChange(index, 'otHours', parseFloat(text) || 0)}
+                      keyboardType="decimal-pad"
+                      dense
+                      disabled={!isEditable}
+                      placeholder="OT"
+                      style={styles.hoursInput}
+                    />
+                  </View>
+                  <View style={styles.descColumn}>
+                    <TextInput
+                      mode="outlined"
+                      value={entry.description}
+                      onChangeText={(text) => handleEntryChange(index, 'description', text)}
+                      placeholder="Description"
+                      dense
+                      disabled={!isEditable}
+                      style={styles.descInput}
+                      multiline={false}
+                    />
+                  </View>
+                </ScrollView>
               </View>
             );
           })}
@@ -169,14 +181,25 @@ export const TimesheetDetailScreen = ({ route, navigation }) => {
           </Button>
         </View>
       )}
-    </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -184,13 +207,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    margin: 8,
+    marginHorizontal: '3%',
+    marginVertical: 8,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   project: {
     marginTop: 4,
@@ -200,12 +226,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 8,
-    padding: 8,
     backgroundColor: 'white',
     borderRadius: 4,
+    overflow: 'hidden',
+  },
+  dayRowScroll: {
+    flexDirection: 'row',
+    padding: 8,
   },
   weekendRow: {
     backgroundColor: '#f5f5f5',
@@ -213,30 +241,35 @@ const styles = StyleSheet.create({
   dateColumn: {
     width: 60,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   weekendText: {
     color: '#d32f2f',
   },
   hoursColumn: {
-    width: 70,
-    marginRight: 4,
+    width: 80,
+    marginRight: 8,
   },
   otColumn: {
-    width: 70,
-    marginHorizontal: 4,
+    width: 80,
+    marginRight: 8,
   },
   hoursInput: {
     height: 40,
+    minWidth: 80,
   },
   totalText: {
     marginTop: 8,
     fontWeight: 'bold',
   },
   descColumn: {
-    flex: 1,
+    width: Math.max(width * 0.4, 150),
+    marginRight: 8,
   },
   descInput: {
     height: 40,
+    minWidth: 150,
   },
   totalContainer: {
     marginTop: 16,
@@ -246,7 +279,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonContainer: {
-    margin: 16,
+    marginHorizontal: '3%',
+    marginVertical: 16,
   },
   button: {
     paddingVertical: 8,

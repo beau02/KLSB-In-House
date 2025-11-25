@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, SafeAreaView } from 'react-native';
 import { Card, Text, Button, Chip, FAB } from 'react-native-paper';
 import moment from 'moment';
 import { timesheetService } from '../services';
@@ -45,12 +45,14 @@ export const TimesheetsScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadTimesheets} />
-        }
-      >
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={loadTimesheets} />
+          }
+        >
         {timesheets.length === 0 ? (
           <Card style={styles.emptyCard}>
             <Card.Content>
@@ -110,28 +112,35 @@ export const TimesheetsScreen = ({ navigation }) => {
                 )}
               </Card.Actions>
             </Card>
-          ))
-        )}
-      </ScrollView>
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate('NewTimesheet')}
-      />
-    </View>
+        ))
+      )}
+        </ScrollView>
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => navigation.navigate('NewTimesheet')}
+        />
+      </View>
+    </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
+};const styles = StyleSheet.create({
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 80,
+  },
   card: {
-    margin: 8,
+    marginHorizontal: '3%',
+    marginVertical: 6,
   },
   emptyCard: {
-    margin: 16,
+    marginHorizontal: '4%',
+    marginVertical: 16,
   },
   emptyText: {
     textAlign: 'center',
@@ -142,6 +151,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   project: {
     marginTop: 8,
