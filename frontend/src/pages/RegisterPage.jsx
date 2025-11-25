@@ -113,7 +113,7 @@ export const RegisterPage = () => {
             backdropFilter: 'blur(10px)',
           }}
         >
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
             <Typography 
               variant="h3" 
               sx={{ 
@@ -121,6 +121,7 @@ export const RegisterPage = () => {
                 color: '#030C69',
                 mb: 1,
                 letterSpacing: '-1px',
+                fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' }
               }}
             >
               Join KLSB
@@ -128,7 +129,7 @@ export const RegisterPage = () => {
             <Typography 
               variant="body1" 
               color="textSecondary"
-              sx={{ fontWeight: 500 }}
+              sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', sm: '1rem' } }}
             >
               Register to join the timesheet management system
             </Typography>

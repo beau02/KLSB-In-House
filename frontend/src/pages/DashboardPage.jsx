@@ -107,22 +107,22 @@ export const DashboardPage = () => {
       background: '#fff',
       border: '1px solid',
       borderColor: alpha(color, 0.2),
-      borderRadius: 3,
+      borderRadius: { xs: 2, sm: 3 },
       position: 'relative',
       overflow: 'hidden',
       transition: 'all 0.3s ease',
       '&:hover': {
-        transform: 'translateY(-4px)',
+        transform: { xs: 'none', sm: 'translateY(-4px)' },
         boxShadow: `0 12px 24px ${alpha(color, 0.2)}`,
         borderColor: alpha(color, 0.4),
       },
     }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={2}>
+      <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={{ xs: 1.5, sm: 2 }}>
           <Box 
             sx={{ 
-              width: 56,
-              height: 56,
+              width: { xs: 48, sm: 56 },
+              height: { xs: 48, sm: 56 },
               borderRadius: 2,
               display: 'flex',
               alignItems: 'center',
@@ -134,14 +134,14 @@ export const DashboardPage = () => {
             {icon}
           </Box>
         </Box>
-        <Typography variant="h3" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+        <Typography variant="h3" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5, fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' } }}>
           {value}
         </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
+        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
           {title}
         </Typography>
         {subtitle && (
-          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
             {subtitle}
           </Typography>
         )}
@@ -162,19 +162,19 @@ export const DashboardPage = () => {
   const isAdmin = user?.role === 'admin' || user?.role === 'manager';
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 5 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
+      <Box sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
           Welcome back, {user?.firstName}! 👋
         </Typography>
-        <Typography variant="body1" sx={{ color: '#64748b', fontSize: '1rem' }}>
+        <Typography variant="body1" sx={{ color: '#64748b', fontSize: { xs: '0.875rem', sm: '1rem' } }}>
           {isAdmin ? `Overview for ${monthName}` : `Here's your timesheet overview for ${monthName}`}
         </Typography>
       </Box>
 
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ mb: { xs: 3, sm: 4 } }}>
         {isAdmin && (
           <>
             <Grid item xs={12} sm={6} lg={3}>

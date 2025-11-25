@@ -140,36 +140,38 @@ export const ProjectsPage = () => {
   }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+    <Container maxWidth={false} sx={{ maxWidth: '95%', px: { xs: 1, sm: 2, md: 3 } }}>
+      <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
           Projects
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="textSecondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
           Manage company and contractor projects
         </Typography>
       </Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={{ xs: 2, sm: 3 }}>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
+          size={window.innerWidth < 600 ? 'small' : 'medium'}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           New Project
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto', boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.08)', sm: '0 4px 20px rgba(0,0,0,0.08)' } }}>
+        <Table sx={{ minWidth: { xs: 700, md: 'unset' } }}>
           <TableHead>
-            <TableRow>
-            <TableCell>Project Code</TableCell>
-            <TableCell>Project Name</TableCell>
-            <TableCell>Company</TableCell>
-            <TableCell>Contractor</TableCell>
-            <TableCell>Start Date</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Code</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Name</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Company</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Contractor</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Start Date</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -203,11 +205,11 @@ export const ProjectsPage = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth sx={{ '& .MuiDialog-paper': { m: { xs: 1, sm: 2 }, maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' } } }}>
+        <DialogTitle sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' }, py: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 3 } }}>
           {selectedProject ? 'Edit Project' : 'Create New Project'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             label="Project Code"

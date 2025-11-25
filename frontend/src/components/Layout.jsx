@@ -79,13 +79,17 @@ export const Layout = ({ children }) => {
         color: 'white',
         borderBottom: '1px solid rgba(255,255,255,0.1)',
       }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-            KLSB
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.9, lineHeight: 1 }}>
-            Timesheet System
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+          <img 
+            src="/static/KLSB Diamond 1 .png" 
+            alt="KLSB Logo" 
+            style={{ height: '40px', width: 'auto' }}
+          />
+          <Box>
+            <Typography variant="caption" sx={{ opacity: 0.9, lineHeight: 1, display: 'block', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+              Timesheet System
+            </Typography>
+          </Box>
         </Box>
       </Toolbar>
       <List sx={{ px: 1, py: 2 }}>
@@ -145,9 +149,7 @@ export const Layout = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-            KLSB
-          </Typography>
+        
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ 
             display: 'flex', 
@@ -217,7 +219,7 @@ export const Layout = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1.5, sm: 2, md: 3 },
           width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
           ml: { xs: 0, md: sidebarOpen ? 0 : `-${drawerWidth}px` },
           mt: '86px',
