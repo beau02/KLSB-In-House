@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/database');
 
 // Import routes
@@ -38,6 +39,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// Serve static files from frontend build
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+// Serve index.html for all non-API routes (SPA fallback)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api') || req.path === '/health') {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -53,12 +67,12 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Warn if JWT_SECRET is missing — helpful during development
 if (!process.env.JWT_SECRET) {
   console.warn('WARNING: JWT_SECRET is not set. Authentication tokens will fail. Set JWT_SECRET in backend/.env');
 }
-
 
 // Global error handlers for silent crashes
 process.on('unhandledRejection', (reason, promise) => {
@@ -70,8 +84,12 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'production'} mode on ${HOST}:${PORT}`);
+  console.log(`Access the server at:`);
+  console.log(`  Local:   http://localhost:${PORT}`);
+  console.log(`  Network: http://192.168.2.20:${PORT}`);
+  console.log(`Health check: http://192.168.2.20:${PORT}/health`);
 });
 
 module.exports = app;
