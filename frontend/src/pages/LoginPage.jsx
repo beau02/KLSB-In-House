@@ -59,7 +59,7 @@ export const LoginPage = () => {
           <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
             <Box sx={{ mb: { xs: 1.5, sm: 2 }, display: 'flex', justifyContent: 'center' }}>
               <img 
-                src="/static/KLSB Diamond 1 .png" 
+                src="/KLSB Diamond 1 .png" 
                 alt="KLSB Logo" 
                 style={{ height: '80px', width: 'auto', maxWidth: '90%' }}
               />
