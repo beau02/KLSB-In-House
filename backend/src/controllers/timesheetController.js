@@ -1,5 +1,6 @@
 const Timesheet = require('../models/Timesheet');
 const User = require('../models/User');
+const OvertimeRequest = require('../models/OvertimeRequest');
 
 // @desc    Get all timesheets
 // @route   GET /api/timesheets
@@ -214,6 +215,38 @@ exports.updateTimesheet = async (req, res) => {
     }
 
     const { entries, disciplineCode, comments } = req.body;
+
+    // Validate OT hours against approved overtime requests
+    if (entries && Array.isArray(entries)) {
+      for (const entry of entries) {
+        if (entry.type === 'ot' && entry.hours > 0) {
+          const entryDate = new Date(timesheet.year, timesheet.month - 1, entry.day);
+          
+          const approvedRequest = await OvertimeRequest.findOne({
+            userId: timesheet.userId,
+            projectId: timesheet.projectId,
+            date: entryDate,
+            status: 'approved'
+          });
+
+          if (!approvedRequest) {
+            return res.status(400).json({ 
+              message: `No approved overtime request found for day ${entry.day}. Please submit an overtime request first.` 
+            });
+          }
+
+          if (entry.hours > approvedRequest.requestedHours) {
+            return res.status(400).json({ 
+              message: `Overtime hours for day ${entry.day} (${entry.hours}h) exceed approved request (${approvedRequest.requestedHours}h)` 
+            });
+          }
+
+          // Update actual hours in the overtime request
+          approvedRequest.actualHours = entry.hours;
+          await approvedRequest.save();
+        }
+      }
+    }
 
     if (entries) timesheet.entries = entries;
     if (disciplineCode !== undefined) timesheet.disciplineCode = disciplineCode;

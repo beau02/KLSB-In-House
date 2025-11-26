@@ -36,9 +36,12 @@ import { userService, departmentService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
 export const StaffManagementPage = () => {
-  const { isAdmin, isEmployee } = useAuth();
+  const { isAdmin, isEmployee, user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // Check if current user is Arif Hensem
+  const isArifHensem = user?.firstName?.toLowerCase() === 'arif' && user?.lastName?.toLowerCase() === 'hensem';
   const [staff, setStaff] = useState([]);
   const [allStaff, setAllStaff] = useState([]); // Store all staff for client-side filtering
   const [loading, setLoading] = useState(true);
@@ -592,7 +595,7 @@ export const StaffManagementPage = () => {
                         Hourly Rate
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
-                        {new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}
+                        {isArifHensem ? new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0) : '********'}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -694,7 +697,7 @@ export const StaffManagementPage = () => {
                     }}
                   >
                     <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.employeeNo || '-'}</TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{isArifHensem ? new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(member.hourlyRate || 0) : '********'}</TableCell>
                     <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word', fontWeight: 600 }}>{`${member.firstName}, ${member.lastName}`}</TableCell>
                     <TableCell sx={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{member.designation || '-'}</TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{member.contactNo || '-'}</TableCell>

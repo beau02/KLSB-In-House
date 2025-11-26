@@ -24,7 +24,9 @@ import {
   Assessment,
   BarChart,
   AttachMoney,
-  ExitToApp
+  ExitToApp,
+  AccessTime,
+  CheckCircle
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,6 +58,7 @@ export const Layout = ({ children }) => {
     { text: 'Dashboard', icon: <Dashboard />, path: '/' },
     { text: 'My Timesheets', icon: <Assignment />, path: '/timesheets' },
     { text: 'Projects', icon: <Work />, path: '/projects' },
+    { text: 'Overtime Request', icon: <AccessTime />, path: '/overtime-requests' },
   ];
 
   // Only show staff management to admins
@@ -66,6 +69,7 @@ export const Layout = ({ children }) => {
   if (isManager) {
     menuItems.push(
       { text: 'Approvals', icon: <Assessment />, path: '/approvals' },
+      { text: 'OT Approvals', icon: <CheckCircle />, path: '/overtime-approvals' },
       { text: 'Reports', icon: <BarChart />, path: '/reports' },
       { text: 'Project Costing', icon: <AttachMoney />, path: '/costing' }
     );
@@ -81,7 +85,7 @@ export const Layout = ({ children }) => {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
           <img 
-            src="/static/KLSB Diamond 1 .png" 
+            src="/KLSB Diamond 1 .png" 
             alt="KLSB Logo" 
             style={{ height: '40px', width: 'auto' }}
           />
@@ -160,9 +164,21 @@ export const Layout = ({ children }) => {
             borderRadius: 2,
             flexShrink: 0,
           }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
-              {user?.firstName} {user?.lastName}
-            </Typography>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/profile')}
+              size="small"
+              sx={{ 
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                },
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+                {user?.firstName} {user?.lastName}
+              </Typography>
+            </Button>
             <Button 
               color="inherit" 
               onClick={handleLogout} 

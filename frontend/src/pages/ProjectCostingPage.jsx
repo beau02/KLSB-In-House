@@ -34,8 +34,10 @@ import {
   CalendarMonth
 } from '@mui/icons-material';
 import { api } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 
 export const ProjectCostingPage = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState('');
@@ -44,6 +46,9 @@ export const ProjectCostingPage = () => {
   const [summaryData, setSummaryData] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
   const [error, setError] = useState('');
+  
+  // Check if current user is Arif Hensem
+  const isArifHensem = user?.firstName?.toLowerCase() === 'arif' && user?.lastName?.toLowerCase() === 'hensem';
 
   useEffect(() => {
     fetchProjects();
@@ -160,7 +165,7 @@ export const ProjectCostingPage = () => {
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Cost (All Projects)"
-                value={formatCurrency(summaryData.summary.grandTotalCost)}
+                value={isArifHensem ? formatCurrency(summaryData.summary.grandTotalCost) : '********'}
                 icon={<AttachMoney />}
                 color="primary"
                 subtitle={`${summaryData.summary.totalProjects} active projects`}
@@ -177,7 +182,7 @@ export const ProjectCostingPage = () => {
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Average Cost per Project"
-                value={formatCurrency(summaryData.summary.averageCostPerProject)}
+                value={isArifHensem ? formatCurrency(summaryData.summary.averageCostPerProject) : '********'}
                 icon={<TrendingUp />}
                 color="primary"
               />
@@ -224,7 +229,7 @@ export const ProjectCostingPage = () => {
                       <TableCell align="right">{formatHours(project.totalOTHours)}</TableCell>
                       <TableCell align="right">{project.employeeCount}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600, color: '#030C69' }}>
-                        {formatCurrency(project.totalCost)}
+                        {isArifHensem ? formatCurrency(project.totalCost) : '********'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -329,7 +334,7 @@ export const ProjectCostingPage = () => {
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Project Cost"
-                value={formatCurrency(projectDetails.summary.totalCost)}
+                value={isArifHensem ? formatCurrency(projectDetails.summary.totalCost) : '********'}
                 icon={<AttachMoney />}
                 color="primary"
               />
@@ -355,7 +360,7 @@ export const ProjectCostingPage = () => {
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Avg Cost per Employee"
-                value={formatCurrency(projectDetails.summary.averageCostPerEmployee)}
+                value={isArifHensem ? formatCurrency(projectDetails.summary.averageCostPerEmployee) : '********'}
                 icon={<TrendingUp />}
                 color="secondary"
               />
@@ -395,17 +400,17 @@ export const ProjectCostingPage = () => {
                             </Box>
                           </TableCell>
                           <TableCell>{emp.user.department || '-'}</TableCell>
-                          <TableCell align="right">{formatCurrency(emp.hourlyRate || 0)}</TableCell>
+                          <TableCell align="right">{isArifHensem ? formatCurrency(emp.hourlyRate || 0) : '********'}</TableCell>
                           <TableCell align="right">
                             {formatHours(emp.totalHours)}
                             <Typography variant="caption" display="block" color="textSecondary">
                               N: {formatHours(emp.normalHours)} | OT: {formatHours(emp.otHours)}
                             </Typography>
                           </TableCell>
-                          <TableCell align="right">{formatCurrency(emp.normalCost)}</TableCell>
-                          <TableCell align="right">{formatCurrency(emp.otCost)}</TableCell>
+                          <TableCell align="right">{isArifHensem ? formatCurrency(emp.normalCost) : '********'}</TableCell>
+                          <TableCell align="right">{isArifHensem ? formatCurrency(emp.otCost) : '********'}</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 600, color: '#030C69' }}>
-                            {formatCurrency(emp.totalCost)}
+                            {isArifHensem ? formatCurrency(emp.totalCost) : '********'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -446,7 +451,7 @@ export const ProjectCostingPage = () => {
                           </TableCell>
                           <TableCell align="right">{month.employeeCount}</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            {formatCurrency(month.totalCost)}
+                            {isArifHensem ? formatCurrency(month.totalCost) : '********'}
                           </TableCell>
                         </TableRow>
                       ))}

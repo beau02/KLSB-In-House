@@ -73,15 +73,15 @@ export const DashboardPage = () => {
         myProjects = (projectsRes.projects || []).filter(p => userProjectIds.includes(p._id));
       }
 
-      // Calculate current month hours
+      // Calculate LAST month hours (since timesheets are for the previous month)
       const currentDate = new Date();
-      const currentMonth = currentDate.getMonth() + 1;
-      const currentYear = currentDate.getFullYear();
+      const lastMonth = currentDate.getMonth() === 0 ? 12 : currentDate.getMonth();
+      const lastMonthYear = currentDate.getMonth() === 0 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
       
       const currentMonthHours = isAdmin
         ? (dashboardStats?.stats?.currentMonthHours || 0)
         : relevantTimesheets
-            .filter(t => t.month === currentMonth && t.year === currentYear && t.status === 'approved')
+            .filter(t => t.month === lastMonth && t.year === lastMonthYear && t.status === 'approved')
             .reduce((sum, t) => sum + (t.totalHours || 0), 0);
 
       setStats({
@@ -158,7 +158,9 @@ export const DashboardPage = () => {
   }
 
   const currentDate = new Date();
+  const lastMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const lastMonthName = lastMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const isAdmin = user?.role === 'admin' || user?.role === 'manager';
 
   return (
@@ -259,13 +261,13 @@ export const DashboardPage = () => {
             }
           }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, position: 'relative', zIndex: 1 }}>
-              📊 This Month's Hours
+              📊 Last Month's Hours
             </Typography>
             <Typography variant="h2" sx={{ fontWeight: 800, mb: 1, position: 'relative', zIndex: 1 }}>
               {stats.currentMonthHours.toFixed(1)}
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.95, position: 'relative', zIndex: 1 }}>
-              {isAdmin ? 'total hours logged this month' : 'hours logged this month'}
+              {isAdmin ? `total hours logged for ${lastMonthName}` : `hours logged for ${lastMonthName}`}
             </Typography>
           </Paper>
         </Grid>

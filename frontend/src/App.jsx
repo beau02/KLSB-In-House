@@ -13,6 +13,9 @@ import { StaffManagementPage } from './pages/StaffManagementPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { ProjectCostingPage } from './pages/ProjectCostingPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { OvertimeRequestPage } from './pages/OvertimeRequestPage';
+import { OvertimeApprovalPage } from './pages/OvertimeApprovalPage';
 
 const theme = createTheme({
   palette: {
@@ -174,6 +177,36 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <ProjectCostingPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ProfilePage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/overtime-requests"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <OvertimeRequestPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/overtime-approvals"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <OvertimeApprovalPage />
                   </Layout>
                 </ProtectedRoute>
               }
