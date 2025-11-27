@@ -92,8 +92,8 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user, lastActivity, showIdleWarning]);
 
-  const login = async (email, password) => {
-    const data = await authService.login(email, password);
+  const login = async (email, password, captchaToken = null) => {
+    const data = await authService.login(email, password, captchaToken);
     setUser(data.user);
     return data;
   };

@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -24,7 +25,8 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.29.4",
     "mongoose": "^8.0.0",
-    "nodemailer": "^7.0.10"
+    "nodemailer": "^7.0.10",
+    "react-google-recaptcha": "^3.1.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

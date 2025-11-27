@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Container,
   Paper,
@@ -11,25 +11,45 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleCaptchaChange = (token) => {
+    setCaptchaToken(token);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    // Check if captcha is required and valid
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (siteKey && !captchaToken) {
+      setError('Please complete the captcha verification');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await login(email, password);
+      await login(email, password, captchaToken);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
+      // Reset captcha on error
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+        setCaptchaToken('');
+      }
     } finally {
       setLoading(false);
     }
@@ -110,6 +130,19 @@ export const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 3 }}
             />
+            
+            {/* reCAPTCHA - only show if site key is configured */}
+            {import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                  onChange={handleCaptchaChange}
+                  onExpired={() => setCaptchaToken('')}
+                />
+              </Box>
+            )}
+            
             <Button
               type="submit"
               fullWidth

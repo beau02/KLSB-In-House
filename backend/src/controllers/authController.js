@@ -1,5 +1,33 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
+
+// Verify reCAPTCHA token
+const verifyRecaptcha = async (token) => {
+  try {
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey) {
+      console.warn('RECAPTCHA_SECRET_KEY not configured - skipping verification');
+      return true; // Allow login if captcha not configured
+    }
+
+    const response = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify`,
+      null,
+      {
+        params: {
+          secret: secretKey,
+          response: token
+        }
+      }
+    );
+
+    return response.data.success;
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error.message);
+    return false;
+  }
+};
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -70,11 +98,19 @@ exports.register = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, captchaToken } = req.body;
 
     // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    // Verify reCAPTCHA if token is provided
+    if (captchaToken) {
+      const isCaptchaValid = await verifyRecaptcha(captchaToken);
+      if (!isCaptchaValid) {
+        return res.status(400).json({ message: 'Invalid captcha verification. Please try again.' });
+      }
     }
 
     // Check for user (explicitly select password)
