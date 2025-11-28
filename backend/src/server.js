@@ -36,8 +36,8 @@ app.use('/api/costing', costingRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/overtime-requests', overtimeRequestRoutes);
 
-// Health check route
-app.get('/health', (req, res) => {
+// Health check route (API path)
+app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
