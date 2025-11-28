@@ -22,7 +22,8 @@ import {
   CircularProgress,
   Grid,
   Card,
-  CardContent
+  CardContent,
+  Autocomplete
 } from '@mui/material';
 import { Add, Edit, Visibility, Send } from '@mui/icons-material';
 import moment from 'moment';
@@ -261,6 +262,58 @@ export const TimesheetsPage = () => {
     
     setFormData({ ...formData, entries: newEntries });
   };
+
+  // Optimized description input with local state to prevent lag
+  const DescriptionInput = React.memo(({ index, value, disabled, onChange }) => {
+    const [localValue, setLocalValue] = React.useState(value || '');
+    const timeoutRef = React.useRef(null);
+
+    React.useEffect(() => {
+      setLocalValue(value || '');
+    }, [value]);
+
+    const handleChange = (newValue) => {
+      setLocalValue(newValue);
+      
+      // Clear existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      // Debounce the update to parent state
+      timeoutRef.current = setTimeout(() => {
+        onChange(index, 'description', newValue);
+      }, 300);
+    };
+
+    React.useEffect(() => {
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }, []);
+
+    return (
+      <Autocomplete
+        freeSolo
+        size="small"
+        fullWidth
+        options={activityDescriptions}
+        inputValue={localValue}
+        onInputChange={(event, newInputValue) => {
+          handleChange(newInputValue || '');
+        }}
+        disabled={disabled}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder="Type or select..."
+          />
+        )}
+      />
+    );
+  });
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -600,21 +653,12 @@ export const TimesheetsPage = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              <TextField
-                                select
-                                size="small"
-                                fullWidth
+                              <DescriptionInput
+                                index={index}
                                 value={entry.description}
-                                onChange={(e) => handleEntryChange(index, 'description', e.target.value)}
                                 disabled={selectedTimesheet?.status === 'approved' || selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted'}
-                              >
-                                <MenuItem value="">-</MenuItem>
-                                {activityDescriptions.map((desc) => (
-                                  <MenuItem key={desc} value={desc}>
-                                    {desc}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
+                                onChange={handleEntryChange}
+                              />
                             </TableCell>
                           </TableRow>
                         );
