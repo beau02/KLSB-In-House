@@ -6,12 +6,16 @@ export const authService = {
     if (captchaToken) {
       payload.captchaToken = captchaToken;
     }
+    console.log('[authService] sending login payload:', { ...payload, captchaToken: captchaToken ? '<<REDACTED:present>>' : '<<absent>>' });
     const response = await api.post('/auth/login', payload);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data;
     }
-    return response.data;
+
+    // If server responded but no token was provided, throw so UI can handle it
+    throw new Error(response.data?.message || 'Authentication succeeded but no token returned');
   },
 
   register: async (userData) => {

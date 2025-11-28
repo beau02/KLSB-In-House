@@ -56,6 +56,9 @@ exports.getProjectCosting = async (req, res) => {
     let totalHours = 0;
 
     timesheets.forEach(ts => {
+      // --- CRITICAL FIX: Skip orphan timesheets (where user was deleted) ---
+      if (!ts.userId) return;
+
       const userId = ts.userId._id.toString();
       
       if (!employeeCosts[userId]) {
@@ -110,6 +113,9 @@ exports.getProjectCosting = async (req, res) => {
     // Calculate monthly breakdown
     const monthlyBreakdown = {};
     timesheets.forEach(ts => {
+      // --- CRITICAL FIX: Skip orphan timesheets ---
+      if (!ts.userId) return;
+
       const key = `${ts.year}-${String(ts.month).padStart(2, '0')}`;
       
       if (!monthlyBreakdown[key]) {
@@ -140,6 +146,8 @@ exports.getProjectCosting = async (req, res) => {
       // OT is treated the same as normal hourly rate (no extra multiplier)
       monthlyBreakdown[key].otCost += otHours * effectiveHourly;
       monthlyBreakdown[key].totalCost = monthlyBreakdown[key].normalCost + monthlyBreakdown[key].otCost;
+      
+      // Safe to access ._id now because we checked !ts.userId above
       monthlyBreakdown[key].employeeCount.add(ts.userId._id.toString());
     });
 
@@ -217,6 +225,9 @@ exports.getAllProjectsCosting = async (req, res) => {
       let totalOTCost = 0;
 
       for (const ts of timesheets) {
+        // --- CRITICAL FIX: Skip orphan timesheets ---
+        if (!ts.userId) continue;
+
         const normal = ts.totalNormalHours || 0;
         const ot = ts.totalOTHours || 0;
         const userHourly = (ts.userId && ts.userId.hourlyRate) ? parseFloat(ts.userId.hourlyRate) : parseFloat(hourlyRate);
@@ -231,7 +242,13 @@ exports.getAllProjectsCosting = async (req, res) => {
       }
 
       const totalCost = totalNormalCost + totalOTCost;
-      const uniqueEmployees = [...new Set(timesheets.map(ts => ts.userId ? ts.userId._id.toString() : ts.userId.toString()))];
+      
+      // --- CRITICAL FIX: Safely map user IDs skipping nulls ---
+      const uniqueEmployees = [...new Set(
+        timesheets
+          .filter(ts => ts.userId) // Filter out nulls first
+          .map(ts => ts.userId._id.toString())
+      )];
 
       projectCostingSummary.push({
         project: {
