@@ -196,13 +196,22 @@ export const RegisterPage = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  select
                   fullWidth
                   label="Department"
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
-                  placeholder="e.g., Engineering Department"
-                />
+                >
+                  <MenuItem value="Engineering">Engineering</MenuItem>
+                  <MenuItem value="Finance">Finance</MenuItem>
+                  <MenuItem value="IT">IT</MenuItem>
+                  <MenuItem value="HR">HR</MenuItem>
+                  <MenuItem value="Operations">Operations</MenuItem>
+                  <MenuItem value="Marketing">Marketing</MenuItem>
+                  <MenuItem value="Sales">Sales</MenuItem>
+                  <MenuItem value="Administration">Administration</MenuItem>
+                </TextField>
               </Grid>
               <Grid item xs={12}>
                 <TextField

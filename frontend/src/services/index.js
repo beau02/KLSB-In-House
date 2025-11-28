@@ -1,8 +1,12 @@
 import api from './api';
 
 export const authService = {
-  login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+  login: async (email, password, captchaToken = null) => {
+    const payload = { email, password };
+    if (captchaToken) {
+      payload.captchaToken = captchaToken;
+    }
+    const response = await api.post('/auth/login', payload);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
