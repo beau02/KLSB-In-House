@@ -24,6 +24,10 @@ const timesheetEntrySchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true
+  },
+  detailedDescription: {
+    type: String,
+    trim: true
   }
 }, { _id: false });
 
@@ -39,6 +43,10 @@ const timesheetSchema = new mongoose.Schema({
     required: [true, 'Project is required']
   },
   disciplineCode: {
+    type: String,
+    trim: true
+  },
+  area: {
     type: String,
     trim: true
   },

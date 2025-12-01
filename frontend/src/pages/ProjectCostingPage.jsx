@@ -36,16 +36,25 @@ import {
   Assessment
 } from '@mui/icons-material';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProjectCostingPage = () => {
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detail'
   const [allProjects, setAllProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
   const [projectData, setProjectData] = useState(null);
-  const [filterMonth, setFilterMonth] = useState('');
-  const [filterYear, setFilterYear] = useState('');
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [avgMode, setAvgMode] = useState('hour'); // 'hour' | 'employee'
+
+  // Check if user has finance access (email contains 'arif' or is admin/manager)
+  const isArif = (user?.email?.toLowerCase() === 'arif.r@kemuncaklanai.com');
+
+  // Admin/Manager can access pages and details, but only Arif sees financial amounts
+  const showDetailedBreakdown = (user?.role === 'admin' || user?.role === 'manager');
 
   // Initialize the page
   useEffect(() => {
@@ -131,6 +140,12 @@ const ProjectCostingPage = () => {
     }).format(amount || 0);
   };
 
+  // Mask currency unless Arif
+  const formatCurrencyMasked = (amount) => {
+    if (!isArif) return '******';
+    return formatCurrency(amount);
+  };
+
   // Format hours
   const formatHours = (hours) => {
     return `${(hours || 0).toFixed(2)}h`;
@@ -213,7 +228,7 @@ const ProjectCostingPage = () => {
                         </Typography>
                       </Box>
                       <Typography variant="body1" fontWeight="bold" color="success.main">
-                        {formatCurrency(project.totalCost)}
+                        {formatCurrencyMasked(project.totalCost)}
                       </Typography>
                     </Box>
 
@@ -352,6 +367,13 @@ const ProjectCostingPage = () => {
         </Alert>
       )}
 
+      {isArif && !showDetailedBreakdown && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <strong>Finance View:</strong> You have access to view financial analysis and cost summaries. 
+          Detailed employee breakdowns are restricted to managers and administrators.
+        </Alert>
+      )}
+
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress size={60} />
@@ -369,7 +391,7 @@ const ProjectCostingPage = () => {
                     </Typography>
                   </Box>
                   <Typography variant="h4" fontWeight="bold" color="white">
-                    {formatCurrency(projectData.summary?.totalCost)}
+                    {formatCurrencyMasked(projectData.summary?.totalCost)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -408,133 +430,175 @@ const ProjectCostingPage = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TrendingUp sx={{ color: 'white', mr: 1 }} />
-                    <Typography variant="body2" color="white">
-                      Avg Cost/Hour
+              <Tooltip title="Click to toggle average metric">
+                <Card onClick={() => setAvgMode(avgMode === 'hour' ? 'employee' : 'hour')}
+                      sx={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', cursor: 'pointer' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <TrendingUp sx={{ color: 'white', mr: 1 }} />
+                      <Typography variant="body2" color="white">
+                        {avgMode === 'hour' ? 'Avg Cost/Hour' : 'Avg Cost/Employee'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="h4" fontWeight="bold" color="white">
+                      {formatCurrencyMasked(
+                        avgMode === 'hour'
+                          ? (projectData.summary?.totalHours > 0
+                              ? projectData.summary.totalCost / projectData.summary.totalHours
+                              : 0)
+                          : (projectData.summary?.employeeCount > 0
+                              ? projectData.summary.totalCost / projectData.summary.employeeCount
+                              : 0)
+                      )}
                     </Typography>
-                  </Box>
-                  <Typography variant="h4" fontWeight="bold" color="white">
-                    {formatCurrency(
-                      projectData.summary?.totalHours > 0
-                        ? projectData.summary.totalCost / projectData.summary.totalHours
-                        : 0
-                    )}
-                  </Typography>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Tooltip>
             </Grid>
           </Grid>
 
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <People />
-              Employee Cost Breakdown
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Employee</strong></TableCell>
-                    <TableCell><strong>Employee No</strong></TableCell>
-                    <TableCell align="right"><strong>Hours Worked</strong></TableCell>
-                    <TableCell align="right"><strong>Total Cost</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Array.isArray(projectData.employeeBreakdown) && projectData.employeeBreakdown.map((emp, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                            {emp.user?.name?.charAt(0) || '?'}
-                          </Avatar>
-                          {emp.user?.name || 'Unknown'}
-                        </Box>
-                      </TableCell>
-                      <TableCell>{emp.user?.employeeNo || 'N/A'}</TableCell>
-                      <TableCell align="right">
-                        <Chip
-                          label={formatHours(emp.totalHours)}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography fontWeight="bold" color="success.main">
-                          {formatCurrency(emp.totalCost)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {(!projectData.employeeBreakdown || projectData.employeeBreakdown.length === 0) && (
-              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
-                No employee data available for this period
-              </Typography>
-            )}
-          </Paper>
+          {/* Financial Analysis Summary removed for Arif: replaced by toggle on Avg Cost card */}
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CalendarMonth />
-              Monthly Cost Breakdown
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Month</strong></TableCell>
-                    <TableCell><strong>Year</strong></TableCell>
-                    <TableCell align="right"><strong>Hours</strong></TableCell>
-                    <TableCell align="right"><strong>Cost</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Array.isArray(projectData.monthlyBreakdown) && projectData.monthlyBreakdown.map((month, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>
-                        <Chip
-                          label={new Date(2000, month.month - 1).toLocaleString('default', { month: 'long' })}
-                          color="secondary"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{month.year}</TableCell>
-                      <TableCell align="right">
-                        <Chip
-                          label={formatHours(month.totalHours)}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography fontWeight="bold" color="success.main">
-                          {formatCurrency(month.totalCost)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {(!projectData.monthlyBreakdown || projectData.monthlyBreakdown.length === 0) && (
-              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
-                No monthly data available
-              </Typography>
-            )}
-          </Paper>
+          {/* Detailed Breakdown - Only for Admin/Manager */}
+          {showDetailedBreakdown && (
+            <>
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <People />
+                  Employee Cost Breakdown
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Employee</strong></TableCell>
+                        <TableCell><strong>Employee No</strong></TableCell>
+                        <TableCell align="right"><strong>Rate</strong></TableCell>
+                        <TableCell align="right"><strong>Normal Hours</strong></TableCell>
+                        <TableCell align="right"><strong>OT Hours</strong></TableCell>
+                        <TableCell align="right"><strong>Total Hours</strong></TableCell>
+                        <TableCell align="right"><strong>Total Cost</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Array.isArray(projectData.employeeBreakdown) && projectData.employeeBreakdown.map((emp, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                                {emp.user?.name?.charAt(0) || '?'}
+                              </Avatar>
+                              {emp.user?.name || 'Unknown'}
+                            </Box>
+                          </TableCell>
+                          <TableCell>{emp.user?.employeeNo || 'N/A'}</TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={isArif ? formatCurrency(emp.hourlyRate) : '******'}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(emp.normalHours)}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(emp.otHours)}
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(emp.totalHours)}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight="bold" color="success.main">
+                              {formatCurrencyMasked(emp.totalCost)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                {(!projectData.employeeBreakdown || projectData.employeeBreakdown.length === 0) && (
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                    No employee data available for this period
+                  </Typography>
+                )}
+              </Paper>
+
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CalendarMonth />
+                  Monthly Cost Breakdown
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Month</strong></TableCell>
+                        <TableCell><strong>Year</strong></TableCell>
+                        <TableCell align="right"><strong>Hours</strong></TableCell>
+                        <TableCell align="right"><strong>Cost</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Array.isArray(projectData.monthlyBreakdown) && projectData.monthlyBreakdown.map((month, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>
+                            <Chip
+                              label={new Date(2000, month.month - 1).toLocaleString('default', { month: 'long' })}
+                              color="secondary"
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>{month.year}</TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(month.totalHours)}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight="bold" color="success.main">
+                              {formatCurrency(month.totalCost)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                {(!projectData.monthlyBreakdown || projectData.monthlyBreakdown.length === 0) && (
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                    No monthly data available
+                  </Typography>
+                )}
+              </Paper>
+            </>
+          )}
         </Box>
       ) : null}
     </Box>
   );
+
+  // Everyone with access to the app can open costing; masking applied where needed
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>

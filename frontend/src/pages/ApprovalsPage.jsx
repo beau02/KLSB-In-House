@@ -317,7 +317,7 @@ export const ApprovalsPage = () => {
           {selectedTimesheet && (
             <>
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2.4}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Period
                   </Typography>
@@ -325,7 +325,7 @@ export const ApprovalsPage = () => {
                     {moment().month(selectedTimesheet.month - 1).format('MMMM')} {selectedTimesheet.year}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={3.6}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Project
                   </Typography>
@@ -333,21 +333,29 @@ export const ApprovalsPage = () => {
                     {selectedTimesheet.projectId?.projectName || 'N/A'}
                   </Typography>
                 </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Discipline
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedTimesheet.disciplineCode || '-'}
-                    </Typography>
-                  </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Discipline
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedTimesheet.disciplineCode || '-'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={2}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Area
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedTimesheet.area || '-'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={2}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Status
                   </Typography>
                   {getStatusChip(selectedTimesheet.status)}
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2.4}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Submitted
                   </Typography>
@@ -361,18 +369,19 @@ export const ApprovalsPage = () => {
 
               <Card variant="outlined" sx={{ mb: 3 }}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Daily Hours Entry
+                  <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                    Daily Hours Entry - {moment().month(selectedTimesheet.month - 1).format('MMMM')} {selectedTimesheet.year}
                   </Typography>
-                  <TableContainer>
-                    <Table size="small">
+                  <TableContainer sx={{ maxHeight: 500 }}>
+                    <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>
-                          <TableCell><strong>Date</strong></TableCell>
-                          <TableCell><strong>Day</strong></TableCell>
-                          <TableCell><strong>Normal Hours</strong></TableCell>
-                          <TableCell><strong>OT Hours</strong></TableCell>
-                          <TableCell><strong>Description</strong></TableCell>
+                          <TableCell width="60px"><strong>Date</strong></TableCell>
+                          <TableCell width="60px"><strong>Day</strong></TableCell>
+                          <TableCell width="100px"><strong>Normal Hours</strong></TableCell>
+                          <TableCell width="100px"><strong>OT Hours</strong></TableCell>
+                          <TableCell width="280px"><strong>Description</strong></TableCell>
+                          <TableCell><strong>Detailed Description</strong></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -394,9 +403,18 @@ export const ApprovalsPage = () => {
                                   {entryDate.format('ddd')}
                                 </Typography>
                               </TableCell>
-                              <TableCell>{entry.normalHours}</TableCell>
-                              <TableCell>{entry.otHours}</TableCell>
-                              <TableCell>{entry.description || '-'}</TableCell>
+                              <TableCell>{entry.normalHours || 0}</TableCell>
+                              <TableCell>{entry.otHours || 0}</TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                  {entry.description || '-'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                  {entry.detailedDescription || '-'}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
                           );
                         })}

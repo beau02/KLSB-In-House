@@ -142,7 +142,7 @@ exports.getTimesheetsByProject = async (req, res) => {
 // @access  Private
 exports.createTimesheet = async (req, res) => {
   try {
-    const { projectId, disciplineCode, month, year, entries } = req.body;
+    const { projectId, disciplineCode, area, month, year, entries } = req.body;
     const userId = req.user.id;
 
     // Check if timesheet already exists for this user/project/month/year.
@@ -177,6 +177,7 @@ exports.createTimesheet = async (req, res) => {
       userId,
       projectId,
       disciplineCode,
+      area,
       month,
       year,
       entries
@@ -214,7 +215,7 @@ exports.updateTimesheet = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update approved or submitted timesheet' });
     }
 
-    const { entries, disciplineCode, comments } = req.body;
+    const { entries, disciplineCode, area, comments } = req.body;
 
     // Validate OT hours against approved overtime requests
     if (entries && Array.isArray(entries)) {
@@ -250,6 +251,7 @@ exports.updateTimesheet = async (req, res) => {
 
     if (entries) timesheet.entries = entries;
     if (disciplineCode !== undefined) timesheet.disciplineCode = disciplineCode;
+    if (area !== undefined) timesheet.area = area;
     if (comments) timesheet.comments = comments;
 
     // If timesheet was rejected, reset it to draft when user edits

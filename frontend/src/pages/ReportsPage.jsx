@@ -19,6 +19,7 @@ import {
   Button
 } from '@mui/material';
 import { Download } from '@mui/icons-material';
+import * as XLSX from 'xlsx';
 import moment from 'moment';
 import { timesheetService, projectService, userService } from '../services';
 
@@ -129,34 +130,62 @@ export const ReportsPage = () => {
 
   const totals = calculateTotals();
 
-  const handleExport = () => {
-    // Create CSV content
-    const headers = ['Employee', 'Employee No', 'Project', 'Normal Hours', 'OT Hours', 'Total Hours', 'Approved Date'];
-    const rows = timesheets.map(t => [
-      `${t.userId?.firstName} ${t.userId?.lastName}`,
-      t.userId?.employeeNo || '-',
-      t.projectId?.projectName || '-',
-      t.totalNormalHours || 0,
-      t.totalOTHours || 0,
-      t.totalHours || 0,
-      t.approvalDate ? moment(t.approvalDate).format('YYYY-MM-DD') : '-'
-    ]);
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(',')),
-      '',
-      `Total,,,${totals.normalHours},${totals.otHours},${totals.totalHours},`
-    ].join('\n');
+  // Build export rows with totals per employee
+  const buildExportRows = () => {
+    const rows = [];
+    timesheets.forEach(t => {
+      const rate = Number(t.userId?.hourlyRate || 0);
+      const employee = `${t.userId?.firstName || ''} ${t.userId?.lastName || ''}`.trim();
+      const code = t.disciplineCode || '';
+      const area = t.area || '';
+      const normalHours = Number(t.totalNormalHours || 0);
+      const otHours = Number(t.totalOTHours || 0);
+      const totalHours = Number(t.totalHours || 0);
+      const cost = rate * totalHours;
+      
+      // Collect all unique descriptions and detailed descriptions
+      const descriptions = new Set();
+      const detailedDescriptions = new Set();
+      (t.entries || []).forEach(e => {
+        if (e.description && e.description.trim()) descriptions.add(e.description.trim());
+        if (e.detailedDescription && e.detailedDescription.trim()) detailedDescriptions.add(e.detailedDescription.trim());
+      });
+      
+      rows.push({
+        Employee: employee,
+        Code: code,
+        Area: area,
+        Description: Array.from(descriptions).join('; '),
+        'Detailed Description': Array.from(detailedDescriptions).join('; '),
+        'Normal Hours': normalHours,
+        'OT Hours': otHours,
+        'Total Hours': totalHours,
+        Rate: rate,
+        Cost: Number(cost.toFixed(2))
+      });
+    });
+    return rows;
+  };
 
-    // Download CSV
+  const handleExportCsv = () => {
+    const headers = ['Employee','Code','Area','Description','Detailed Description','Normal Hours','OT Hours','Total Hours','Rate','Cost'];
+    const rows = buildExportRows().map(r => headers.map(h => r[h]));
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v.replace(/"/g,'""')}"` : v).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `timesheet-report-${moment().month(selectedMonth - 1).format('MMMM')}-${selectedYear}.csv`;
+    a.download = `timesheet-details-${moment().month(selectedMonth - 1).format('MMMM')}-${selectedYear}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportXlsx = () => {
+    const rows = buildExportRows();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet Details');
+    XLSX.writeFile(wb, `timesheet-details-${moment().month(selectedMonth - 1).format('MMMM')}-${selectedYear}.xlsx`);
   };
 
   if (loading) {
@@ -177,14 +206,22 @@ export const ReportsPage = () => {
           View approved timesheets and monthly summaries
         </Typography>
       </Box>
-      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3} gap={1}>
         <Button
-          variant="contained"
+          variant="outlined"
           startIcon={<Download />}
-          onClick={handleExport}
+          onClick={handleExportCsv}
           disabled={timesheets.length === 0}
         >
           Export CSV
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Download />}
+          onClick={handleExportXlsx}
+          disabled={timesheets.length === 0}
+        >
+          Export XLSX
         </Button>
       </Box>
 

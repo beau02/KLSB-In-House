@@ -63,6 +63,24 @@ export const OvertimeRequestPage = () => {
     fetchProjects();
   }, []);
 
+  // Area options - keep in sync with TimesheetsPage
+  const areaOptions = [
+    'NA',
+    'SOW 1 [BASED SCOPE]',
+    'SOW 2 [HOLD SCOPE]',
+    'VO-002',
+    'VO-003',
+    'VO-004',
+    'VO-005',
+    'VO-006',
+    'VO-007',
+    'VO-008',
+    'VO-009',
+    'VO-010',
+    'DATA REMEDIATION',
+    'DATA CONVERSION'
+  ];
+
   const fetchRequests = async () => {
     try {
       setLoading(true);
@@ -473,14 +491,21 @@ export const OvertimeRequestPage = () => {
               </Select>
             </FormControl>
 
-            <TextField
-              label="Area"
-              value={formData.area}
-              onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-              fullWidth
-              helperText="Enter work area or location"
-              placeholder="Enter area"
-            />
+            <FormControl fullWidth>
+              <InputLabel>Area</InputLabel>
+              <Select
+                value={formData.area}
+                label="Area"
+                onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {areaOptions.map((a) => (
+                  <MenuItem key={a} value={a}>{a}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             <TextField
               label="Reason"
