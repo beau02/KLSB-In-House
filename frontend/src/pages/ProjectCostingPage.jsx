@@ -1,142 +1,128 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
-  Typography,
+  Container,
   Paper,
+  Typography,
+  Button,
   Grid,
   Card,
   CardContent,
+  Divider,
+  Chip,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
-  Button,
-  Select,
+  IconButton,
   MenuItem,
-  FormControl,
-  InputLabel,
-  Chip,
+  TextField,
   Alert,
   CircularProgress,
-  Tabs,
-  Tab,
-  IconButton,
-  Tooltip
+  Stack,
+  Tooltip,
+  Avatar
 } from '@mui/material';
 import {
-  AttachMoney,
+  Visibility,
+  ArrowBack,
   TrendingUp,
   People,
   AccessTime,
-  Work,
+  AttachMoney,
   CalendarMonth,
-  Visibility,
-  ArrowForward
+  Assessment
 } from '@mui/icons-material';
-import { api } from '../services';
-import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
-export const ProjectCostingPage = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState(0);
-  const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [summaryData, setSummaryData] = useState(null);
-  const [projectDetails, setProjectDetails] = useState(null);
-  const [error, setError] = useState('');
-  
-  // Check if current user is Arif Hensem
-  const isArifHensem = user?.firstName?.toLowerCase() === 'arif' && user?.lastName?.toLowerCase() === 'hensem';
+const ProjectCostingPage = () => {
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detail'
+  const [allProjects, setAllProjects] = useState([]);
+  const [activeProject, setActiveProject] = useState(null);
+  const [projectData, setProjectData] = useState(null);
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
+  // Initialize the page
   useEffect(() => {
-    fetchProjects();
-    fetchSummary();
+    loadProjectsSummary();
   }, []);
 
-  const fetchProjects = async () => {
+  // Fetch all projects summary
+  const loadProjectsSummary = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
     try {
-      const response = await api.get('/projects');
-      setProjects(response.data.projects || []);
-    } catch (err) {
-      console.error('Error loading projects:', err);
-    }
-  };
-
-  const fetchSummary = async () => {
-    try {
-      setLoading(true);
       const response = await api.get('/costing/summary');
-      setSummaryData(response.data);
-      setError('');
+      // Backend returns { projects: [...] }
+      const projectsList = response.data?.projects || [];
+      const projects = Array.isArray(projectsList) ? projectsList : [];
+      setAllProjects(projects);
     } catch (err) {
-      console.error('Error loading summary:', err);
-      setError('Failed to load costing summary');
+      setErrorMessage(err.response?.data?.message || 'Failed to load project summary');
+      setAllProjects([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleProjectClick = (projectIdRaw) => {
-    // Ensure ID is a string to avoid object/string mismatch
-    const projectId = String(projectIdRaw);
-
-    if (!projectId) {
-        console.error("No project ID provided to handleProjectClick");
-        return;
-    }
-    
-    console.log("Navigating to project details for:", projectId);
-    
-    // 1. Update selection state
-    setSelectedProject(projectId);
-    
-    // 2. Force switch to Details tab
-    setActiveTab(1);
-    
-    // 3. Fetch details immediately
-    fetchProjectDetails(projectId);
-    
-    // 4. Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const fetchProjectDetails = async (projectIdParam) => {
-    // Prefer parameter, fallback to state
-    const pid = projectIdParam ? String(projectIdParam) : selectedProject;
-
-    if (!pid) {
-      setError('Please select a project');
-      return;
-    }
-
+  // Load detailed project data
+  const loadProjectData = async (projectId, month = '', year = '') => {
+    setIsLoading(true);
+    setErrorMessage('');
     try {
-      setLoading(true);
-      const params = {};
-      if (selectedMonth) {
-        const [year, month] = selectedMonth.split('-');
-        if (year && month) {
-          params.year = parseInt(year, 10);
-          params.month = parseInt(month, 10);
-        }
-      }
-
-      console.log(`Fetching details from /costing/project/${pid}`);
-      const response = await api.get(`/costing/project/${pid}`, { params });
-      setProjectDetails(response.data);
-      setError('');
+      const params = new URLSearchParams();
+      if (month) params.append('month', month);
+      if (year) params.append('year', year);
+      
+      const url = `/costing/project/${projectId}${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await api.get(url);
+      
+      // Map backend response to frontend structure
+      const data = {
+        summary: response.data?.summary || {},
+        employeeBreakdown: Array.isArray(response.data?.employeeCosts) ? response.data.employeeCosts : [],
+        monthlyBreakdown: Array.isArray(response.data?.monthlyBreakdown) ? response.data.monthlyBreakdown : []
+      };
+      setProjectData(data);
     } catch (err) {
-      console.error('Error fetching details:', err);
-      setError('Failed to load project costing details. ' + (err.response?.data?.message || err.message));
+      setErrorMessage(err.response?.data?.message || 'Failed to load project details');
+      setProjectData(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  // Handle project selection
+  const selectProject = (project) => {
+    setActiveProject(project);
+    setViewMode('detail');
+    const projectId = project.project?.id || project.id;
+    loadProjectData(projectId, filterMonth, filterYear);
+  };
+
+  // Handle back to overview
+  const returnToOverview = () => {
+    setViewMode('overview');
+    setActiveProject(null);
+    setProjectData(null);
+    setFilterMonth('');
+    setFilterYear('');
+  };
+
+  // Handle filter change
+  const applyFilters = () => {
+    if (activeProject) {
+      const projectId = activeProject.project?.id || activeProject.id;
+      loadProjectData(projectId, filterMonth, filterYear);
+    }
+  };
+
+  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-MY', {
       style: 'currency',
@@ -145,460 +131,416 @@ export const ProjectCostingPage = () => {
     }).format(amount || 0);
   };
 
+  // Format hours
   const formatHours = (hours) => {
-    return typeof hours === 'number' ? hours.toFixed(2) : '0.00';
+    return `${(hours || 0).toFixed(2)}h`;
   };
 
-  const StatCard = ({ title, value, icon, color = 'primary', subtitle }) => (
-    <Card sx={{ height: '100%', background: `linear-gradient(135deg, ${color === 'primary' ? '#030C69' : '#4CAF50'} 0%, ${color === 'primary' ? '#1a2d9e' : '#66BB6A'} 100%)`, color: 'white' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ 
-            backgroundColor: 'rgba(255,255,255,0.2)', 
-            borderRadius: 2, 
-            p: 1, 
-            mr: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {icon}
-          </Box>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            {title}
-          </Typography>
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: subtitle ? 1 : 0 }}>
-          {value}
+  // Render overview mode
+  const renderOverview = () => (
+    <Box>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" fontWeight="bold" color="primary">
+          Project Costing Overview
         </Typography>
-        {subtitle && (
-          <Typography variant="caption" sx={{ opacity: 0.8 }}>
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // --- TAB CONTENT COMPONENTS ---
-
-  const SummaryTab = () => (
-    <Box>
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button 
-          variant="contained" 
-          onClick={fetchSummary}
-          disabled={loading}
-          startIcon={<Work />}
+        <Button
+          variant="outlined"
+          startIcon={<Assessment />}
+          onClick={loadProjectsSummary}
         >
-          Refresh Summary
+          Refresh Data
         </Button>
       </Box>
 
-      {summaryData && (
-        <>
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Cost (All Projects)"
-                value={isArifHensem ? formatCurrency(summaryData.summary.grandTotalCost) : '********'}
-                icon={<AttachMoney />}
-                color="primary"
-                subtitle={`${summaryData.summary.totalProjects} active projects`}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Hours"
-                value={formatHours(summaryData.summary.grandTotalHours)}
-                icon={<AccessTime />}
-                color="secondary"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Average Cost per Project"
-                value={isArifHensem ? formatCurrency(summaryData.summary.averageCostPerProject) : '********'}
-                icon={<TrendingUp />}
-                color="primary"
-              />
-            </Grid>
-          </Grid>
-
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Projects Breakdown
-            </Typography>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Project Code</TableCell>
-                    <TableCell>Project Name</TableCell>
-                    <TableCell>Company</TableCell>
-                    <TableCell align="right">Total Hours</TableCell>
-                    <TableCell align="right">Employees</TableCell>
-                    <TableCell align="right">Total Cost</TableCell>
-                    <TableCell align="center" width="80">Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {summaryData.projects.map((projectItem) => {
-                    const p = projectItem.project;
-                    // Handle ID: The API returns `id` in the summary object, but `_id` in regular project objects
-                    // We use String() to ensure it's a primitive string
-                    const projectId = String(p._id || p.id);
-                    
-                    return (
-                      <TableRow 
-                        key={projectId}
-                        hover
-                        sx={{ 
-                            cursor: 'pointer', 
-                            transition: 'background-color 0.2s',
-                            '&:hover': { backgroundColor: 'rgba(3, 12, 105, 0.04)' } 
-                        }}
-                        onClick={() => handleProjectClick(projectId)}
-                      >
-                        <TableCell>
-                          <Chip 
-                            label={p.projectCode} 
-                            size="small" 
-                            color="primary" 
-                            variant="outlined"
-                            sx={{ fontWeight: 600, cursor: 'pointer' }}
-                            // IMPORTANT: Remove onClick from Chip so row click works, 
-                            // or explicitly delegate to row handler
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleProjectClick(projectId);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 500 }}>{p.projectName}</TableCell>
-                        <TableCell>{p.company || '-'}</TableCell>
-                        <TableCell align="right">
-                          {formatHours(projectItem.totalHours)}
-                          <Typography variant="caption" display="block" color="textSecondary">
-                            N: {formatHours(projectItem.totalNormalHours)} | OT: {formatHours(projectItem.totalOTHours)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">{projectItem.employeeCount}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, color: '#030C69' }}>
-                          {isArifHensem ? formatCurrency(projectItem.totalCost) : '********'}
-                        </TableCell>
-                        <TableCell align="center">
-                            <Tooltip title="View Details">
-                                <IconButton 
-                                    size="small" 
-                                    color="primary"
-                                    onClick={(e) => {
-                                        e.stopPropagation(); 
-                                        handleProjectClick(projectId);
-                                    }}
-                                >
-                                    <Visibility fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {summaryData.projects.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography color="textSecondary">No project data available</Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </>
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {errorMessage}
+        </Alert>
       )}
-    </Box>
-  );
 
-  const ProjectDetailsTab = () => (
-    <Box>
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button 
-            startIcon={<ArrowForward sx={{ transform: 'rotate(180deg)' }} />}
-            onClick={() => setActiveTab(0)}
-            sx={{ mr: 1 }}
-        >
-            Back
-        </Button>
-
-        <FormControl sx={{ minWidth: 300 }} size="small">
-          <InputLabel id="project-select-label">Select Project</InputLabel>
-          <Select
-            labelId="project-select-label"
-            id="project-select"
-            value={selectedProject}
-            onChange={(e) => {
-                setSelectedProject(e.target.value);
-                // If user manually changes dropdown, fetch that project
-                if (e.target.value) fetchProjectDetails(e.target.value);
-            }}
-            label="Select Project"
-          >
-            <MenuItem value="">
-              <em>Select a project</em>
-            </MenuItem>
-            {projects.map((project) => (
-              <MenuItem key={project._id || project.id} value={project._id || project.id}>
-                {project.projectCode} - {project.projectName}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <TextField
-          label="Month"
-          type="month"
-          size="small"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          sx={{ minWidth: 200 }}
-        />
-
-        <Button 
-          variant="contained" 
-          onClick={() => fetchProjectDetails()} 
-          disabled={loading || !selectedProject}
-        >
-          Generate Report
-        </Button>
-      </Box>
-
-      {/* Show content if details exist */}
-      {projectDetails ? (
-        <>
-          <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%)' }}>
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                    <Typography variant="overline" color="textSecondary" sx={{ letterSpacing: 1 }}>
-                        Project Details
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: '#030C69' }}>
-                    {projectDetails.project.projectCode} - {projectDetails.project.projectName}
-                    </Typography>
-                </Box>
-                <Chip 
-                    label={projectDetails.project.status.toUpperCase()} 
-                    color={projectDetails.project.status === 'active' ? 'success' : 'default'}
-                    sx={{ fontWeight: 'bold' }}
-                />
-            </Box>
-            
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6} md={4}>
-                <Typography variant="caption" color="textSecondary" display="block">Company</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {projectDetails.project.company || 'N/A'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Typography variant="caption" color="textSecondary" display="block">Contractor</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {projectDetails.project.contractor || 'N/A'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Typography variant="caption" color="textSecondary" display="block">Date Range</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {typeof projectDetails.costingParameters.dateRange === 'string' 
-                    ? projectDetails.costingParameters.dateRange 
-                    : `${projectDetails.costingParameters.dateRange.startDate} to ${projectDetails.costingParameters.dateRange.endDate}`}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Project Cost"
-                value={isArifHensem ? formatCurrency(projectDetails.summary.totalCost) : '********'}
-                icon={<AttachMoney />}
-                color="primary"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Hours"
-                value={formatHours(projectDetails.summary.totalHours)}
-                icon={<AccessTime />}
-                color="secondary"
-                subtitle={`Normal: ${formatHours(projectDetails.summary.totalNormalHours)} | OT: ${formatHours(projectDetails.summary.totalOTHours)}`}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Employees"
-                value={projectDetails.summary.employeeCount}
-                icon={<People />}
-                color="primary"
-                subtitle={`${projectDetails.summary.timesheetCount} timesheets`}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Avg Cost per Employee"
-                value={isArifHensem ? formatCurrency(projectDetails.summary.averageCostPerEmployee) : '********'}
-                icon={<TrendingUp />}
-                color="secondary"
-              />
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} lg={7}>
-              <Paper sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Employee Costs Breakdown
-                </Typography>
-                <TableContainer sx={{ maxHeight: 500 }}>
-                  <Table stickyHeader size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Employee</TableCell>
-                        <TableCell align="right">Hourly Rate</TableCell>
-                        <TableCell align="right">Hours</TableCell>
-                        <TableCell align="right">Total Cost</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {projectDetails.employeeCosts.map((emp) => (
-                        <TableRow key={emp.user.id || emp.user._id} hover>
-                          <TableCell>
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {emp.user.name}
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary">
-                                {emp.user.department || '-'} • {emp.user.employeeNo || 'N/A'}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">{isArifHensem ? formatCurrency(emp.hourlyRate || 0) : '********'}</TableCell>
-                          <TableCell align="right">
-                            <Box display="flex" flexDirection="column" alignItems="flex-end">
-                                <Typography variant="body2">{formatHours(emp.totalHours)}</Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                    N:{formatHours(emp.normalHours)} OT:{formatHours(emp.otHours)}
-                                </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600, color: '#030C69' }}>
-                            {isArifHensem ? formatCurrency(emp.totalCost) : '********'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} lg={5}>
-              <Paper sx={{ p: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Monthly Breakdown
-                </Typography>
-                <TableContainer sx={{ maxHeight: 500 }}>
-                  <Table stickyHeader size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Period</TableCell>
-                        <TableCell align="right">Hours</TableCell>
-                        <TableCell align="right">Staff</TableCell>
-                        <TableCell align="right">Cost</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {projectDetails.monthlyBreakdown.map((month, idx) => (
-                        <TableRow key={idx} hover>
-                          <TableCell>
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <CalendarMonth fontSize="small" color="action" />
-                                {`${month.year}-${String(month.month).padStart(2, '0')}`}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">
-                            {formatHours(month.totalHours)}
-                          </TableCell>
-                          <TableCell align="right">{month.employeeCount}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>
-                            {isArifHensem ? formatCurrency(month.totalCost) : '********'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-          </Grid>
-        </>
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={60} />
+        </Box>
       ) : (
-        // Fallback state if no details loaded yet
-        <Paper sx={{ p: 4, textAlign: 'center', background: '#f5f7fa', border: '1px dashed #ccc' }}>
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-                {loading ? 'Loading Project Details...' : 'Select a project to view details'}
-            </Typography>
-            {!loading && !selectedProject && (
-                <Typography variant="body2" color="textSecondary">
-                    Go back to the Summary tab or select a project from the dropdown above.
-                </Typography>
-            )}
+        <Grid container spacing={3}>
+          {Array.isArray(allProjects) && allProjects.map((project) => (
+            <Grid item xs={12} md={6} lg={4} key={project.id}>
+              <Card
+                elevation={3}
+                sx={{
+                  height: '100%',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6
+                  }
+                }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" fontWeight="bold" gutterBottom>
+                        {project.project?.projectCode || project.projectCode}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {project.project?.projectName || project.projectName}
+                      </Typography>
+                      <Chip
+                        label={project.project?.company || project.company || 'No Company'}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Box>
+                    <IconButton
+                      color="primary"
+                      onClick={() => selectProject(project)}
+                      sx={{ ml: 1 }}
+                    >
+                      <Visibility />
+                    </IconButton>
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AttachMoney fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          Total Cost
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" fontWeight="bold" color="success.main">
+                        {formatCurrency(project.totalCost)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AccessTime fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          Total Hours
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" fontWeight="bold">
+                        {formatHours(project.totalHours)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <People fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          Employees
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" fontWeight="bold">
+                        {project.employeeCount || 0}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<Visibility />}
+                    onClick={() => selectProject(project)}
+                    sx={{ mt: 3 }}
+                  >
+                    View Details
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {!isLoading && allProjects.length === 0 && !errorMessage && (
+        <Paper sx={{ p: 6, textAlign: 'center' }}>
+          <Assessment sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            No project data available
+          </Typography>
         </Paper>
       )}
     </Box>
   );
 
-  return (
+  // Render detail mode
+  const renderDetail = () => (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#030C69', mb: 1 }}>
-          Project Costing
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Calculate and analyze manhour costs per project
-        </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={returnToOverview}
+          sx={{ mb: 2 }}
+        >
+          Back to Overview
+        </Button>
+
+        <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <Typography variant="h4" fontWeight="bold" color="white" gutterBottom>
+            {activeProject?.project?.projectCode || activeProject?.projectCode}
+          </Typography>
+          <Typography variant="body1" color="white" sx={{ opacity: 0.9 }}>
+            {activeProject?.project?.projectName || activeProject?.projectName}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Filter by Period
+          </Typography>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                fullWidth
+                label="Month"
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+              >
+                <MenuItem value="">All Months</MenuItem>
+                <MenuItem value="1">January</MenuItem>
+                <MenuItem value="2">February</MenuItem>
+                <MenuItem value="3">March</MenuItem>
+                <MenuItem value="4">April</MenuItem>
+                <MenuItem value="5">May</MenuItem>
+                <MenuItem value="6">June</MenuItem>
+                <MenuItem value="7">July</MenuItem>
+                <MenuItem value="8">August</MenuItem>
+                <MenuItem value="9">September</MenuItem>
+                <MenuItem value="10">October</MenuItem>
+                <MenuItem value="11">November</MenuItem>
+                <MenuItem value="12">December</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                fullWidth
+                label="Year"
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+              >
+                <MenuItem value="">All Years</MenuItem>
+                <MenuItem value="2024">2024</MenuItem>
+                <MenuItem value="2025">2025</MenuItem>
+                <MenuItem value="2026">2026</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={applyFilters}
+                disabled={isLoading}
+              >
+                Apply Filter
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-          {error}
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {errorMessage}
         </Alert>
       )}
 
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={60} />
         </Box>
-      )}
+      ) : projectData ? (
+        <Box>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <AttachMoney sx={{ color: 'white', mr: 1 }} />
+                    <Typography variant="body2" color="white">
+                      Total Cost
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    {formatCurrency(projectData.summary?.totalCost)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={(e, newValue) => setActiveTab(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab label="All Projects Summary" icon={<Work />} iconPosition="start" />
-          {/* REMOVED disabled={!selectedProject} to ensure switch works */}
-          <Tab label="Project Details" icon={<TrendingUp />} iconPosition="start" />
-        </Tabs>
-      </Paper>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <AccessTime sx={{ color: 'white', mr: 1 }} />
+                    <Typography variant="body2" color="white">
+                      Total Hours
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    {formatHours(projectData.summary?.totalHours)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-      <Box sx={{ mt: 3 }}>
-        {activeTab === 0 && <SummaryTab />}
-        {activeTab === 1 && <ProjectDetailsTab />}
-      </Box>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <People sx={{ color: 'white', mr: 1 }} />
+                    <Typography variant="body2" color="white">
+                      Employees
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    {projectData.summary?.employeeCount || 0}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <TrendingUp sx={{ color: 'white', mr: 1 }} />
+                    <Typography variant="body2" color="white">
+                      Avg Cost/Hour
+                    </Typography>
+                  </Box>
+                  <Typography variant="h4" fontWeight="bold" color="white">
+                    {formatCurrency(
+                      projectData.summary?.totalHours > 0
+                        ? projectData.summary.totalCost / projectData.summary.totalHours
+                        : 0
+                    )}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <People />
+              Employee Cost Breakdown
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Employee</strong></TableCell>
+                    <TableCell><strong>Employee No</strong></TableCell>
+                    <TableCell align="right"><strong>Hours Worked</strong></TableCell>
+                    <TableCell align="right"><strong>Total Cost</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Array.isArray(projectData.employeeBreakdown) && projectData.employeeBreakdown.map((emp, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                            {emp.user?.name?.charAt(0) || '?'}
+                          </Avatar>
+                          {emp.user?.name || 'Unknown'}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{emp.user?.employeeNo || 'N/A'}</TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={formatHours(emp.totalHours)}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography fontWeight="bold" color="success.main">
+                          {formatCurrency(emp.totalCost)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {(!projectData.employeeBreakdown || projectData.employeeBreakdown.length === 0) && (
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                No employee data available for this period
+              </Typography>
+            )}
+          </Paper>
+
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CalendarMonth />
+              Monthly Cost Breakdown
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Month</strong></TableCell>
+                    <TableCell><strong>Year</strong></TableCell>
+                    <TableCell align="right"><strong>Hours</strong></TableCell>
+                    <TableCell align="right"><strong>Cost</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Array.isArray(projectData.monthlyBreakdown) && projectData.monthlyBreakdown.map((month, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>
+                        <Chip
+                          label={new Date(2000, month.month - 1).toLocaleString('default', { month: 'long' })}
+                          color="secondary"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{month.year}</TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={formatHours(month.totalHours)}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography fontWeight="bold" color="success.main">
+                          {formatCurrency(month.totalCost)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {(!projectData.monthlyBreakdown || projectData.monthlyBreakdown.length === 0) && (
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                No monthly data available
+              </Typography>
+            )}
+          </Paper>
+        </Box>
+      ) : null}
     </Box>
   );
+
+  return (
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {viewMode === 'overview' ? renderOverview() : renderDetail()}
+    </Container>
+  );
 };
+
+export { ProjectCostingPage };

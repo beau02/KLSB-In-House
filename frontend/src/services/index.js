@@ -6,7 +6,6 @@ export const authService = {
     if (captchaToken) {
       payload.captchaToken = captchaToken;
     }
-    console.log('[authService] sending login payload:', { ...payload, captchaToken: captchaToken ? '<<REDACTED:present>>' : '<<absent>>' });
     const response = await api.post('/auth/login', payload);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);

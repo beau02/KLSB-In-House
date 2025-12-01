@@ -1,6 +1,7 @@
 const Timesheet = require('../models/Timesheet');
 const Project = require('../models/Project');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // @desc    Get project costing report with manhour costs
 // @route   GET /api/costing/project/:projectId
@@ -8,22 +9,38 @@ const User = require('../models/User');
 exports.getProjectCosting = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { startDate, endDate, hourlyRate = 50 } = req.query; // Default hourly rate of $50
+    // EXTRACT month/year from query
+    const { startDate, endDate, month, year, hourlyRate = 50 } = req.query; 
 
-    // Get project details
+    console.log('[COSTING] getProjectCosting called with:', {
+      projectId,
+      month,
+      year,
+      user: req.user?.email,
+      role: req.user?.role
+    });
+
+    // Validate Project ID
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      console.error('[COSTING] Invalid Project ID format:', projectId);
+      return res.status(400).json({ message: 'Invalid Project ID format' });
+    }
+
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Build filter for timesheets
     const filter = { 
       projectId, 
       status: 'approved' 
     };
 
-    // Add date filtering if provided
-    if (startDate && endDate) {
+    // --- ADDED THIS MISSING LOGIC ---
+    if (month && year) {
+        filter.month = parseInt(month);
+        filter.year = parseInt(year);
+    } else if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       
@@ -33,30 +50,29 @@ exports.getProjectCosting = async (req, res) => {
       const endYear = end.getFullYear();
       
       filter.$or = [];
-      for (let year = startYear; year <= endYear; year++) {
-        const monthStart = (year === startYear) ? startMonth : 1;
-        const monthEnd = (year === endYear) ? endMonth : 12;
+      for (let y = startYear; y <= endYear; y++) {
+        const monthStart = (y === startYear) ? startMonth : 1;
+        const monthEnd = (y === endYear) ? endMonth : 12;
         
-        for (let month = monthStart; month <= monthEnd; month++) {
-          filter.$or.push({ month, year });
+        for (let m = monthStart; m <= monthEnd; m++) {
+          filter.$or.push({ month: m, year: y });
         }
       }
     }
+    // --------------------------------
 
-    // Get all approved timesheets for the project
     const timesheets = await Timesheet.find(filter)
       .populate('userId', 'firstName lastName email department designation employeeNo hourlyRate')
       .populate('projectId', 'projectCode projectName company contractor')
       .sort({ year: 1, month: 1 });
 
-    // Calculate costing by employee
     const employeeCosts = {};
     let totalNormalHours = 0;
     let totalOTHours = 0;
     let totalHours = 0;
 
     timesheets.forEach(ts => {
-      // --- CRITICAL FIX: Skip orphan timesheets (where user was deleted) ---
+      // Safety check for deleted users
       if (!ts.userId) return;
 
       const userId = ts.userId._id.toString();
@@ -85,7 +101,6 @@ exports.getProjectCosting = async (req, res) => {
       const otHours = ts.totalOTHours || 0;
       const hours = ts.totalHours || 0;
 
-      // Use per-user hourly rate if provided, otherwise fallback to query param hourlyRate
       const userHourly = (ts.userId && ts.userId.hourlyRate) ? parseFloat(ts.userId.hourlyRate) : parseFloat(hourlyRate);
       const effectiveHourly = isNaN(userHourly) ? 50 : userHourly;
 
@@ -93,9 +108,7 @@ exports.getProjectCosting = async (req, res) => {
       employeeCosts[userId].otHours += otHours;
       employeeCosts[userId].totalHours += hours;
       employeeCosts[userId].normalCost += normalHours * effectiveHourly;
-      // OT is treated the same as normal hourly rate (no extra multiplier)
       employeeCosts[userId].otCost += otHours * effectiveHourly;
-      // expose the effective hourly rate used for this employee (for UI/debug)
       employeeCosts[userId].hourlyRate = effectiveHourly;
       employeeCosts[userId].totalCost = employeeCosts[userId].normalCost + employeeCosts[userId].otCost;
       employeeCosts[userId].timesheetCount += 1;
@@ -105,15 +118,12 @@ exports.getProjectCosting = async (req, res) => {
       totalHours += hours;
     });
 
-    // For totals, if per-user rates vary we sum per-user costs from employeeCosts
     const totalNormalCost = Object.values(employeeCosts).reduce((s, e) => s + (e.normalCost || 0), 0);
     const totalOTCost = Object.values(employeeCosts).reduce((s, e) => s + (e.otCost || 0), 0);
     const totalCost = totalNormalCost + totalOTCost;
 
-    // Calculate monthly breakdown
     const monthlyBreakdown = {};
     timesheets.forEach(ts => {
-      // --- CRITICAL FIX: Skip orphan timesheets ---
       if (!ts.userId) return;
 
       const key = `${ts.year}-${String(ts.month).padStart(2, '0')}`;
@@ -138,20 +148,17 @@ exports.getProjectCosting = async (req, res) => {
       monthlyBreakdown[key].normalHours += normalHours;
       monthlyBreakdown[key].otHours += otHours;
       monthlyBreakdown[key].totalHours += ts.totalHours || 0;
-      // Determine effective hourly for this timesheet's user
+      
       const userHourly = (ts.userId && ts.userId.hourlyRate) ? parseFloat(ts.userId.hourlyRate) : parseFloat(hourlyRate);
       const effectiveHourly = isNaN(userHourly) ? 50 : userHourly;
 
       monthlyBreakdown[key].normalCost += normalHours * effectiveHourly;
-      // OT is treated the same as normal hourly rate (no extra multiplier)
       monthlyBreakdown[key].otCost += otHours * effectiveHourly;
       monthlyBreakdown[key].totalCost = monthlyBreakdown[key].normalCost + monthlyBreakdown[key].otCost;
       
-      // Safe to access ._id now because we checked !ts.userId above
       monthlyBreakdown[key].employeeCount.add(ts.userId._id.toString());
     });
 
-    // Convert Set to count
     Object.keys(monthlyBreakdown).forEach(key => {
       monthlyBreakdown[key].employeeCount = monthlyBreakdown[key].employeeCount.size;
     });
@@ -170,7 +177,7 @@ exports.getProjectCosting = async (req, res) => {
         hourlyRate: parseFloat(hourlyRate),
         overtimeMultiplier: 1.0,
         overtimeRate: parseFloat(hourlyRate) * 1.0,
-        dateRange: startDate && endDate ? { startDate, endDate } : 'All time'
+        dateRange: month && year ? `${year}-${month}` : (startDate && endDate ? { startDate, endDate } : 'All time')
       },
       summary: {
         totalNormalHours,
@@ -202,22 +209,21 @@ exports.getProjectCosting = async (req, res) => {
 // @access  Private/Manager/Admin
 exports.getAllProjectsCosting = async (req, res) => {
   try {
-    // Summary should reflect per-user hourly rates. We'll compute costs by populating users on timesheets
     const { hourlyRate = 50 } = req.query;
 
-    // Get all active projects
+    console.log('[COSTING] getAllProjectsCosting called by:', req.user?.email);
+
     const projects = await Project.find({ status: 'active' }).sort({ projectCode: 1 });
+    console.log('[COSTING] Found', projects.length, 'active projects');
 
     const projectCostingSummary = [];
 
     for (const project of projects) {
-      // Get all approved timesheets for this project and populate user hourlyRate
       const timesheets = await Timesheet.find({
         projectId: project._id,
         status: 'approved'
       }).populate('userId', 'hourlyRate');
 
-      // Compute totals using per-user rates where available
       let totalNormalHours = 0;
       let totalOTHours = 0;
       let totalHours = 0;
@@ -225,7 +231,6 @@ exports.getAllProjectsCosting = async (req, res) => {
       let totalOTCost = 0;
 
       for (const ts of timesheets) {
-        // --- CRITICAL FIX: Skip orphan timesheets ---
         if (!ts.userId) continue;
 
         const normal = ts.totalNormalHours || 0;
@@ -237,16 +242,14 @@ exports.getAllProjectsCosting = async (req, res) => {
         totalOTHours += ot;
         totalHours += (ts.totalHours || 0);
         totalNormalCost += normal * effectiveHourly;
-        // OT is treated the same as normal hourly rate
         totalOTCost += ot * effectiveHourly;
       }
 
       const totalCost = totalNormalCost + totalOTCost;
       
-      // --- CRITICAL FIX: Safely map user IDs skipping nulls ---
       const uniqueEmployees = [...new Set(
         timesheets
-          .filter(ts => ts.userId) // Filter out nulls first
+          .filter(ts => ts.userId) 
           .map(ts => ts.userId._id.toString())
       )];
 
@@ -269,7 +272,6 @@ exports.getAllProjectsCosting = async (req, res) => {
       });
     }
 
-    // Sort by total cost descending
     projectCostingSummary.sort((a, b) => b.totalCost - a.totalCost);
 
     const grandTotal = projectCostingSummary.reduce((sum, p) => sum + p.totalCost, 0);
