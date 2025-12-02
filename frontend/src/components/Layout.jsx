@@ -13,7 +13,8 @@ import {
   Box,
   Divider,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Tooltip
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -26,10 +27,13 @@ import {
   AttachMoney,
   ExitToApp,
   AccessTime,
-  CheckCircle
+  CheckCircle,
+  Brightness4,
+  Brightness7
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeMode } from '../App';
 
 const drawerWidth = 200;
 
@@ -37,9 +41,11 @@ export const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const { user, logout, isManager, isAdmin } = useAuth();
+  const { mode, toggleTheme } = useThemeMode();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isDarkMode = theme.palette.mode === 'dark';
 
   const handleDrawerToggle = () => {
     if (isMobile) {
@@ -76,12 +82,14 @@ export const Layout = ({ children }) => {
   }
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: isDarkMode ? '#0f172a' : 'white' }}>
       <Toolbar sx={{ 
-        background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)', 
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)' 
+          : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)', 
         minHeight: '70px !important',
         color: 'white',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        borderBottom: isDarkMode ? '1px solid #334155' : '1px solid rgba(255,255,255,0.1)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
           <img 
@@ -108,26 +116,56 @@ export const Layout = ({ children }) => {
             sx={{
               borderRadius: 2,
               mb: 0.5,
+              color: isDarkMode ? '#e5e7eb' : 'inherit',
               '&:hover': {
-                backgroundColor: 'rgba(3, 12, 105, 0.08)',
+                backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(3, 12, 105, 0.08)',
               },
               ...(window.location.pathname === item.path && {
-                backgroundColor: 'rgba(3, 12, 105, 0.12)',
+                backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.25)' : 'rgba(3, 12, 105, 0.12)',
                 '& .MuiListItemIcon-root': {
-                  color: '#030C69',
+                  color: isDarkMode ? '#818cf8' : '#030C69',
                 },
                 '& .MuiListItemText-primary': {
-                  color: '#030C69',
+                  color: isDarkMode ? '#818cf8' : '#030C69',
                   fontWeight: 600,
                 },
               }),
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemIcon sx={{ minWidth: 40, color: isDarkMode ? '#e5e7eb' : 'inherit' }}>{item.icon}</ListItemIcon>
+            <ListItemText 
+              primary={item.text}
+              sx={{
+                '& .MuiListItemText-primary': {
+                  color: isDarkMode ? '#e5e7eb' : 'inherit',
+                },
+              }}
+            />
           </ListItem>
         ))}
       </List>
+      <Box sx={{ mt: 'auto', p: 2, borderTop: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}` }}>
+        <Tooltip title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'} placement="right">
+          <IconButton
+            onClick={toggleTheme}
+            sx={{
+              width: '100%',
+              borderRadius: 2,
+              py: 1.5,
+              color: isDarkMode ? '#e5e7eb' : '#030C69',
+              backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(3, 12, 105, 0.08)',
+              '&:hover': {
+                backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.25)' : 'rgba(3, 12, 105, 0.15)',
+              },
+            }}
+          >
+            {isDarkMode ? <Brightness7 /> : <Brightness4 />}
+            <Typography variant="body2" sx={{ ml: 1, fontWeight: 500 }}>
+              {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+            </Typography>
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   );
 
@@ -139,8 +177,10 @@ export const Layout = ({ children }) => {
         sx={{
           width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
           ml: { xs: 0, md: sidebarOpen ? `${drawerWidth}px` : 0 },
-          background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)' 
+            : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+          borderBottom: isDarkMode ? '1px solid #334155' : '1px solid rgba(255,255,255,0.1)',
           transition: 'all 0.3s ease',
         }}
       >
@@ -239,7 +279,7 @@ export const Layout = ({ children }) => {
           width: { xs: '100%', md: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
           ml: { xs: 0, md: sidebarOpen ? 0 : `-${drawerWidth}px` },
           mt: '86px',
-          backgroundColor: '#f5f7fa',
+          backgroundColor: isDarkMode ? '#0f172a' : '#f5f7fa',
           minHeight: '100vh',
           transition: 'all 0.3s ease',
         }}

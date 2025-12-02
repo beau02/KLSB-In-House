@@ -191,5 +191,47 @@ export const statsService = {
   }
 };
 
+export const overtimeRequestService = {
+  getMyRequests: async () => {
+    const response = await api.get('/overtime-requests/my-requests');
+    return response.data;
+  },
+
+  getAll: async (params) => {
+    const response = await api.get('/overtime-requests', { params });
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/overtime-requests/${id}`);
+    return response.data;
+  },
+
+  create: async (requestData) => {
+    const response = await api.post('/overtime-requests', requestData);
+    return response.data;
+  },
+
+  update: async (id, requestData) => {
+    const response = await api.put(`/overtime-requests/${id}`, requestData);
+    return response.data;
+  },
+
+  approve: async (id) => {
+    const response = await api.put(`/overtime-requests/${id}/approve`);
+    return response.data;
+  },
+
+  reject: async (id, rejectionReason) => {
+    const response = await api.put(`/overtime-requests/${id}/reject`, { rejectionReason });
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/overtime-requests/${id}`);
+    return response.data;
+  }
+};
+
 // Re-export the axios instance so modules can import { api } from './services'
 export { default as api } from './api';

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+const ThemeModeContext = createContext(null);
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
@@ -17,8 +19,9 @@ import { ProfilePage } from './pages/ProfilePage';
 import { OvertimeRequestPage } from './pages/OvertimeRequestPage';
 import { OvertimeApprovalPage } from './pages/OvertimeApprovalPage';
 
-const theme = createTheme({
+const lightTheme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
       main: '#030C69',
       light: '#1a2d9e',
@@ -102,11 +105,166 @@ const theme = createTheme({
   },
 });
 
-function App() {
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#6366f1',
+      light: '#818cf8',
+      dark: '#4f46e5',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#10b981',
+      light: '#34d399',
+      dark: '#059669',
+    },
+    background: {
+      default: '#0f172a',
+      paper: '#1e293b',
+    },
+    text: {
+      primary: '#e5e7eb',
+      secondary: '#9ca3af',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+      letterSpacing: '-0.5px',
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 500,
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            borderColor: '#475569',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          padding: '8px 20px',
+          boxShadow: 'none',
+        },
+        contained: {
+          boxShadow: '0 2px 4px rgba(99,102,241,0.3)',
+          '&:hover': {
+            boxShadow: '0 4px 8px rgba(99,102,241,0.4)',
+          },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          borderBottom: '1px solid #334155',
+        },
+        head: {
+          backgroundColor: '#0f172a',
+          fontWeight: 600,
+          color: '#e5e7eb',
+          borderBottom: '2px solid #334155',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#334155',
+          color: '#e5e7eb',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundImage: 'none',
+          backgroundColor: '#1e293b',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': {
+              borderColor: '#334155',
+            },
+            '&:hover fieldset': {
+              borderColor: '#475569',
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+export const useThemeMode = () => {
+  const context = useContext(ThemeModeContext);
+  if (!context) {
+    throw new Error('useThemeMode must be used within ThemeModeProvider');
+  }
+  return context;
+};
+
+function AppContent() {
+  const [mode, setMode] = useState(() => {
+    const savedMode = localStorage.getItem('themeMode');
+    return savedMode || 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+  }, [mode]);
+
+  const toggleTheme = () => {
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
+
+  const theme = mode === 'dark' ? darkTheme : lightTheme;
+
+  const themeModeValue = {
+    mode,
+    toggleTheme,
+  };
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
+    <ThemeModeContext.Provider value={themeModeValue}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -214,8 +372,16 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ThemeModeContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

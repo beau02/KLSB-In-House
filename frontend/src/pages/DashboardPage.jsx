@@ -104,7 +104,6 @@ export const DashboardPage = () => {
   const StatCard = ({ title, value, icon, color, subtitle }) => (
     <Card sx={{ 
       height: '100%',
-      background: '#fff',
       border: '1px solid',
       borderColor: alpha(color, 0.2),
       borderRadius: { xs: 2, sm: 3 },
@@ -134,14 +133,14 @@ export const DashboardPage = () => {
             {icon}
           </Box>
         </Box>
-        <Typography variant="h3" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5, fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' } }}>
+        <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5, fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' } }}>
           {value}
         </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
           {title}
         </Typography>
         {subtitle && (
-          <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+          <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
             {subtitle}
           </Typography>
         )}
@@ -167,10 +166,10 @@ export const DashboardPage = () => {
     <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1, sm: 2, md: 3 } }}>
       {/* Header */}
       <Box sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
           Welcome back, {user?.firstName}! 👋
         </Typography>
-        <Typography variant="body1" sx={{ color: '#64748b', fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+        <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
           {isAdmin ? `Overview for ${monthName}` : `Here's your timesheet overview for ${monthName}`}
         </Typography>
       </Box>
@@ -243,7 +242,6 @@ export const DashboardPage = () => {
           <Paper sx={{ 
             p: 4, 
             borderRadius: 3,
-            border: '1px solid #e2e8f0',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
             minHeight: '180px',
@@ -275,37 +273,68 @@ export const DashboardPage = () => {
           <Paper sx={{ 
             p: 4, 
             borderRadius: 3,
-            border: '1px solid #e2e8f0',
             minHeight: '180px'
           }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1e293b' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
               {isAdmin ? '🎯 All Active Projects' : '🎯 My Active Projects'}
             </Typography>
             {stats.myProjects.length > 0 ? (
-              <Box sx={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: 1,
-                maxHeight: isAdmin ? '120px' : 'auto',
-                overflowY: isAdmin ? 'auto' : 'visible'
-              }}>
+              <Box
+                sx={{
+                  maxHeight: isAdmin ? '120px' : 'auto',
+                  overflowY: isAdmin ? 'auto' : 'visible',
+                  pr: 1
+                }}
+              >
                 {stats.myProjects.map((project) => (
-                  <Chip
+                  <Box
                     key={project._id}
-                    label={`${project.projectCode} - ${project.projectName}`}
-                    sx={{ 
-                      background: alpha('#6366f1', 0.1),
-                      color: '#6366f1',
-                      fontWeight: 500,
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      mb: 1.2,
+                      background: (theme) => theme.palette.mode === 'dark' ? alpha('#6366f1', 0.2) : alpha('#6366f1', 0.07),
+                      borderRadius: 2,
+                      px: 1.5,
+                      py: 1,
+                      transition: 'background 0.2s',
                       '&:hover': {
-                        background: alpha('#6366f1', 0.2),
-                      }
+                        background: (theme) => theme.palette.mode === 'dark' ? alpha('#6366f1', 0.35) : alpha('#6366f1', 0.15),
+                      },
                     }}
-                  />
+                  >
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        bgcolor: '#22c55e',
+                        mr: 1.5,
+                        flexShrink: 0,
+                        boxShadow: '0 0 0 2px #fff',
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: (theme) => theme.palette.mode === 'dark' ? '#e5e7eb' : '#3730a3',
+                        fontWeight: 500,
+                        fontSize: '1rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: { xs: '180px', sm: '320px', md: '420px' },
+                        cursor: 'pointer',
+                      }}
+                      title={`${project.projectCode} - ${project.projectName}`}
+                    >
+                      {`${project.projectCode} - ${project.projectName}`}
+                    </Typography>
+                  </Box>
                 ))}
               </Box>
             ) : (
-              <Typography variant="body2" sx={{ color: '#64748b' }}>
+              <Typography variant="body2" sx={{ opacity: 0.7 }}>
                 {isAdmin ? 'No active projects in the system.' : 'No active projects yet. Start by creating a timesheet!'}
               </Typography>
             )}

@@ -34,7 +34,7 @@ import {
   Work
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { overtimeRequestService } from '../services';
 
 export const OvertimeApprovalPage = () => {
   const { user } = useAuth();
@@ -54,8 +54,8 @@ export const OvertimeApprovalPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/overtime-requests');
-      setRequests(response.data.requests || []);
+      const response = await overtimeRequestService.getAll();
+      setRequests(response.requests || response.overtimeRequests || []);
     } catch (err) {
       setError('Failed to load overtime requests');
     } finally {
@@ -79,9 +79,7 @@ export const OvertimeApprovalPage = () => {
   const handleApprove = async () => {
     try {
       setLoading(true);
-      await api.put(`/overtime-requests/${selectedRequest._id}/approve`, {
-        approvedBy: user.id
-      });
+      await overtimeRequestService.approve(selectedRequest._id);
       setSuccess('Overtime request approved successfully');
       handleCloseDialog();
       fetchRequests();
@@ -101,10 +99,7 @@ export const OvertimeApprovalPage = () => {
 
     try {
       setLoading(true);
-      await api.put(`/overtime-requests/${selectedRequest._id}/reject`, {
-        rejectedBy: user.id,
-        rejectionReason
-      });
+      await overtimeRequestService.reject(selectedRequest._id, rejectionReason);
       setSuccess('Overtime request rejected');
       handleCloseDialog();
       fetchRequests();
@@ -152,10 +147,10 @@ export const OvertimeApprovalPage = () => {
   return (
     <Container maxWidth="xl">
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#030C69', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
           Overtime Approvals
         </Typography>
-        <Typography variant="body1" color="textSecondary">
+        <Typography variant="body1">
           Review and approve overtime requests from employees
         </Typography>
       </Box>
@@ -182,7 +177,7 @@ export const OvertimeApprovalPage = () => {
                   {pendingCount}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2">
                 Pending Approval
               </Typography>
             </CardContent>
@@ -197,7 +192,7 @@ export const OvertimeApprovalPage = () => {
                   {approvedCount}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2">
                 Approved
               </Typography>
             </CardContent>
@@ -212,7 +207,7 @@ export const OvertimeApprovalPage = () => {
                   {rejectedCount}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2">
                 Rejected
               </Typography>
             </CardContent>

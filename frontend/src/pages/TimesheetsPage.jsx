@@ -25,11 +25,12 @@ import {
   CardContent,
   Select,
   InputLabel,
-  FormControl
+  FormControl,
+  Tooltip
 } from '@mui/material';
-import { Add, Edit, Visibility, Send } from '@mui/icons-material';
+import { Add, Edit, Visibility, Send, Delete, Block } from '@mui/icons-material';
 import moment from 'moment';
-import { timesheetService, projectService } from '../services';
+import { timesheetService, projectService, overtimeRequestService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
 export const TimesheetsPage = () => {
@@ -39,6 +40,9 @@ export const TimesheetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTimesheet, setSelectedTimesheet] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [overtimeRequests, setOvertimeRequests] = useState([]);
   const [formData, setFormData] = useState({
     projectId: '',
     disciplineCode: '',
@@ -104,7 +108,7 @@ export const TimesheetsPage = () => {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [user, selectedMonth, selectedYear]);
 
   const loadData = async () => {
     try {
@@ -113,7 +117,7 @@ export const TimesheetsPage = () => {
       
       if (user) {
         const userId = user._id || user.id;
-        timesheetsRes = await timesheetService.getByUser(userId);
+        timesheetsRes = await timesheetService.getByUser(userId, { month: selectedMonth, year: selectedYear });
       }
 
       const fetchedTimesheets = timesheetsRes.timesheets || timesheetsRes.timesheet || [];
@@ -144,7 +148,17 @@ export const TimesheetsPage = () => {
     return entries;
   };
 
-  const handleOpenDialog = (timesheet = null) => {
+  const handleOpenDialog = async (timesheet = null) => {
+    // Load overtime requests
+    try {
+      const otRes = await overtimeRequestService.getMyRequests();
+      console.log('Loaded OT requests:', otRes); // Debug log
+      setOvertimeRequests(otRes.requests || otRes.overtimeRequests || []);
+    } catch (error) {
+      console.error('Error loading OT requests:', error);
+      setOvertimeRequests([]);
+    }
+
     if (timesheet) {
       setSelectedTimesheet(timesheet);
       
@@ -206,6 +220,12 @@ export const TimesheetsPage = () => {
     const newEntries = [...formData.entries];
     
     if (field === 'normalHours' || field === 'otHours') {
+      // Block OT hours if there's a rejected OT request for this date
+      if (field === 'otHours' && isOTBlockedForDate(newEntries[index].date)) {
+        alert('Cannot enter OT hours for this date. Your OT request was rejected.');
+        return;
+      }
+      
       const numValue = value === '' ? 0 : parseFloat(value) || 0;
       newEntries[index][field] = numValue;
     } else if (field === 'hoursCode') {
@@ -228,6 +248,18 @@ export const TimesheetsPage = () => {
 
   const handleSubmit = async () => {
     try {
+      // Validate that no OT hours are entered on rejected dates
+      const invalidEntries = formData.entries.filter(entry => {
+        const rejectedOT = isOTBlockedForDate(entry.date);
+        return rejectedOT && entry.otHours > 0;
+      });
+
+      if (invalidEntries.length > 0) {
+        const dates = invalidEntries.map(e => moment(e.date).format('MMM DD')).join(', ');
+        alert(`Cannot save timesheet. OT hours are entered for dates with rejected OT requests: ${dates}`);
+        return;
+      }
+
       const payload = {
         ...formData,
         area: formData.area,
@@ -258,6 +290,19 @@ export const TimesheetsPage = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this timesheet? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await timesheetService.delete(id);
+      loadData();
+    } catch (error) {
+      console.error('Error deleting timesheet:', error);
+      alert(error.response?.data?.message || 'Error deleting timesheet');
+    }
+  };
+
   const getStatusChip = (status) => {
     const colors = {
       draft: 'default',
@@ -274,6 +319,31 @@ export const TimesheetsPage = () => {
     return timesheet && ['approved', 'submitted', 'resubmitted'].includes(timesheet.status);
   };
 
+  const isOTBlockedForDate = (date) => {
+    const dateStr = moment(date).format('YYYY-MM-DD');
+    const currentProjectId = formData.projectId;
+    
+    console.log('Checking OT block for date:', dateStr, 'Project:', currentProjectId, 'Total OT requests:', overtimeRequests.length);
+    
+    const rejectedRequest = overtimeRequests.find(req => {
+      const reqDateStr = moment(req.date).format('YYYY-MM-DD');
+      const reqProjectId = req.projectId?._id || req.projectId;
+      
+      console.log('  Comparing - Date:', reqDateStr, 'Project:', reqProjectId, 'Status:', req.status);
+      
+      // Block only if BOTH date AND project match, and status is rejected
+      return reqDateStr === dateStr && 
+             reqProjectId === currentProjectId && 
+             req.status === 'rejected';
+    });
+    
+    if (rejectedRequest) {
+      console.log('  ✓ Found rejected OT for this date+project:', dateStr, rejectedRequest);
+    }
+    
+    return rejectedRequest;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -285,15 +355,36 @@ export const TimesheetsPage = () => {
   return (
     <Container maxWidth={false} sx={{ maxWidth: '95%', py: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           My Timesheets
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2">
           Track your daily hours for each project
         </Typography>
       </Box>
 
-      <Box display="flex" justifyContent="flex-end" mb={3}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <TextField
+          select
+          label="Month"
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(Number(e.target.value))}
+          size="small"
+          sx={{ minWidth: 120 }}
+        >
+          {moment.months().map((month, idx) => (
+            <MenuItem key={idx} value={idx + 1}>{month}</MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          type="number"
+          label="Year"
+          value={selectedYear}
+          onChange={e => setSelectedYear(Number(e.target.value))}
+          size="small"
+          sx={{ minWidth: 100 }}
+        />
+        <Box sx={{ flex: 1 }} />
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
           New Timesheet
         </Button>
@@ -302,7 +393,7 @@ export const TimesheetsPage = () => {
       <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+            <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : '#f5f7fa' }}>
               <TableCell sx={{ fontWeight: 600 }}>Period</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Project</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Normal Hours</TableCell>
@@ -336,14 +427,18 @@ export const TimesheetsPage = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(timesheet)}
-                      disabled={['approved', 'submitted', 'resubmitted'].includes(timesheet.status)}
                     >
                       {['draft', 'rejected'].includes(timesheet.status) ? <Edit /> : <Visibility />}
                     </IconButton>
                     {['draft', 'rejected'].includes(timesheet.status) && (
-                      <IconButton size="small" color="primary" onClick={() => handleSubmitForApproval(timesheet._id)}>
-                        <Send />
-                      </IconButton>
+                      <>
+                        <IconButton size="small" color="primary" onClick={() => handleSubmitForApproval(timesheet._id)}>
+                          <Send />
+                        </IconButton>
+                        <IconButton size="small" color="error" onClick={() => handleDelete(timesheet._id)}>
+                          <Delete />
+                        </IconButton>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -365,11 +460,11 @@ export const TimesheetsPage = () => {
         
         <DialogContent>
           {selectedTimesheet?.rejectionReason && (
-            <Paper sx={{ p: 2, mb: 3, bgcolor: '#fef2f2', border: '1px solid #fecaca' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#dc2626', mb: 1 }}>
+            <Paper sx={{ p: 2, mb: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2', border: (theme) => theme.palette.mode === 'dark' ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid #fecaca' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: (theme) => theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626', mb: 1 }}>
                 ⚠️ Rejection Reason:
               </Typography>
-              <Typography variant="body2" sx={{ color: '#991b1b' }}>
+              <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#fecaca' : '#991b1b' }}>
                 {selectedTimesheet.rejectionReason}
               </Typography>
             </Paper>
@@ -481,10 +576,10 @@ export const TimesheetsPage = () => {
                       const isWeekend = entryDate.day() === 0 || entryDate.day() === 6;
                       
                       return (
-                        <TableRow key={index} sx={{ bgcolor: isWeekend ? '#f5f5f5' : 'white' }}>
+                        <TableRow key={index} sx={{ bgcolor: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#f5f5f5') : 'inherit' }}>
                           <TableCell>{entryDate.format('DD')}</TableCell>
                           <TableCell>
-                            <Typography variant="body2" color={isWeekend ? 'error' : 'textPrimary'}>
+                            <Typography variant="body2" sx={{ color: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? '#fca5a5' : '#d32f2f') : 'inherit' }}>
                               {entryDate.format('ddd')}
                             </Typography>
                           </TableCell>
@@ -528,15 +623,41 @@ export const TimesheetsPage = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              fullWidth
-                              value={entry.otHours || ''}
-                              onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
-                              inputProps={{ min: 0, max: 24, step: 0.5 }}
-                              disabled={isReadOnly(selectedTimesheet)}
-                            />
+                            {(() => {
+                              const rejectedOT = isOTBlockedForDate(entry.date);
+                              const isOTDisabled = isReadOnly(selectedTimesheet) || rejectedOT;
+                              
+                              return rejectedOT ? (
+                                <Tooltip title={`OT request rejected: ${rejectedOT.rejectionReason || 'No reason provided'}`} arrow>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <TextField
+                                      type="number"
+                                      size="small"
+                                      fullWidth
+                                      value={0}
+                                      disabled
+                                      sx={{
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                          WebkitTextFillColor: (theme) => theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626',
+                                          cursor: 'not-allowed'
+                                        }
+                                      }}
+                                    />
+                                    <Block sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626', fontSize: 20 }} />
+                                  </Box>
+                                </Tooltip>
+                              ) : (
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  fullWidth
+                                  value={entry.otHours || ''}
+                                  onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
+                                  inputProps={{ min: 0, max: 24, step: 0.5 }}
+                                  disabled={isReadOnly(selectedTimesheet)}
+                                />
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <FormControl size="small" fullWidth>
@@ -572,7 +693,7 @@ export const TimesheetsPage = () => {
                 </Table>
               </TableContainer>
 
-              <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#e3f2fd', borderRadius: 1 }}>
                 <Grid container spacing={2}>
                   <Grid item xs={4}>
                     <Typography variant="h6">

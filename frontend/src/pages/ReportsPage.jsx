@@ -199,10 +199,10 @@ export const ReportsPage = () => {
   return (
     <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#030C69' }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           Timesheet Reports
         </Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+        <Typography variant="body2" sx={{ mt: 1 }}>
           View approved timesheets and monthly summaries
         </Typography>
       </Box>
@@ -283,7 +283,7 @@ export const ReportsPage = () => {
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+              <Typography  gutterBottom>
                 Total Employees
               </Typography>
               <Typography variant="h4">{timesheets.length}</Typography>
@@ -293,7 +293,7 @@ export const ReportsPage = () => {
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+              <Typography  gutterBottom>
                 Total Normal Hours
               </Typography>
               <Typography variant="h4">{totals.normalHours.toFixed(1)}</Typography>
@@ -303,7 +303,7 @@ export const ReportsPage = () => {
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+              <Typography  gutterBottom>
                 Total OT Hours
               </Typography>
               <Typography variant="h4">{totals.otHours.toFixed(1)}</Typography>
@@ -311,9 +311,9 @@ export const ReportsPage = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={3}>
-          <Card sx={{ backgroundColor: '#e3f2fd' }}>
+          <Card sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#e3f2fd' }}>
             <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+              <Typography  gutterBottom>
                 <strong>Total Hours</strong>
               </Typography>
               <Typography variant="h4">
@@ -377,7 +377,7 @@ export const ReportsPage = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : '#f5f5f5' }}>
                   <TableCell colSpan={4} align="right">
                     <strong>TOTAL:</strong>
                   </TableCell>
@@ -400,3 +400,4 @@ export const ReportsPage = () => {
     </Container>
   );
 };
+

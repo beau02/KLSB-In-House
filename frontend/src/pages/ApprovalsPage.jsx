@@ -23,34 +23,50 @@ import {
   Card,
   CardContent,
   Tabs,
-  Tab
+  Tab,
+  MenuItem
 } from '@mui/material';
 import { Visibility, CheckCircle, Cancel } from '@mui/icons-material';
 import moment from 'moment';
-import { timesheetService } from '../services';
+import { timesheetService, projectService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
 export const ApprovalsPage = () => {
   const { user } = useAuth();
   const [timesheets, setTimesheets] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTimesheet, setSelectedTimesheet] = useState(null);
   const [comments, setComments] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedProject, setSelectedProject] = useState('all');
 
   useEffect(() => {
     loadTimesheets();
-  }, []);
+    loadProjects();
+  }, [selectedMonth, selectedYear]);
 
   const loadTimesheets = async () => {
     try {
-      const response = await timesheetService.getAll();
+      const params = { month: selectedMonth, year: selectedYear };
+      const response = await timesheetService.getAll(params);
       setTimesheets(response.timesheets || []);
     } catch (error) {
       console.error('Error loading timesheets:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProjects = async () => {
+    try {
+      const response = await projectService.getAll();
+      setProjects(response.projects || []);
+    } catch (error) {
+      console.error('Error loading projects:', error);
     }
   };
 
@@ -169,16 +185,32 @@ export const ApprovalsPage = () => {
   };
 
   const filterTimesheets = () => {
+    let filtered = timesheets;
+
+    // Filter by status based on tab
     switch (tabValue) {
       case 0: // Pending
-        return timesheets.filter(t => t.status === 'submitted' || t.status === 'resubmitted');
+        filtered = filtered.filter(t => t.status === 'submitted' || t.status === 'resubmitted');
+        break;
       case 1: // Approved
-        return timesheets.filter(t => t.status === 'approved');
+        filtered = filtered.filter(t => t.status === 'approved');
+        break;
       case 2: // Rejected
-        return timesheets.filter(t => t.status === 'rejected');
+        filtered = filtered.filter(t => t.status === 'rejected');
+        break;
       default:
-        return timesheets;
+        break;
     }
+
+    // Filter by project
+    if (selectedProject !== 'all') {
+      filtered = filtered.filter(t => {
+        const projectId = t.projectId?._id || t.projectId;
+        return projectId === selectedProject;
+      });
+    }
+
+    return filtered;
   };
 
   const filteredTimesheets = filterTimesheets();
@@ -194,34 +226,72 @@ export const ApprovalsPage = () => {
   return (
     <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           Timesheet Approvals
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2">
           Review and approve employee timesheets
         </Typography>
       </Box>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{
-            '& .MuiTab-root': {
-              fontWeight: 600,
-              '&.Mui-selected': {
-                color: '#030C69',
-              },
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#030C69',
-            },
-          }}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <TextField
+          select
+          label="Month"
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(Number(e.target.value))}
+          size="small"
+          sx={{ minWidth: 120 }}
         >
-          <Tab label={`Pending (${timesheets.filter(t => t.status === 'submitted').length})`} />
-          <Tab label={`Approved (${timesheets.filter(t => t.status === 'approved').length})`} />
-          <Tab label={`Rejected (${timesheets.filter(t => t.status === 'rejected').length})`} />
-        </Tabs>
+          {moment.months().map((month, idx) => (
+            <MenuItem key={idx} value={idx + 1}>{month}</MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          type="number"
+          label="Year"
+          value={selectedYear}
+          onChange={e => setSelectedYear(Number(e.target.value))}
+          size="small"
+          sx={{ minWidth: 100 }}
+        />
+        <TextField
+          select
+          label="Project"
+          value={selectedProject}
+          onChange={e => setSelectedProject(e.target.value)}
+          size="small"
+          sx={{ minWidth: 250 }}
+        >
+          <MenuItem value="all">All Projects</MenuItem>
+          {projects.map((project) => (
+            <MenuItem key={project._id} value={project._id}>
+              {project.projectCode} - {project.projectName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Box sx={{ flex: 1 }} />
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', flex: 1 }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={(e, newValue) => setTabValue(newValue)}
+            sx={{
+              '& .MuiTab-root': {
+                fontWeight: 600,
+                '&.Mui-selected': {
+                  color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#030C69',
+                },
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#030C69',
+              },
+            }}
+          >
+            <Tab label={`Pending (${timesheets.filter(t => t.status === 'submitted' || t.status === 'resubmitted').length})`} />
+            <Tab label={`Approved (${timesheets.filter(t => t.status === 'approved').length})`} />
+            <Tab label={`Rejected (${timesheets.filter(t => t.status === 'rejected').length})`} />
+          </Tabs>
+        </Box>
       </Box>
 
       <TableContainer component={Paper} sx={{ borderRadius: 3, overflowX: 'auto' }}>
@@ -283,7 +353,7 @@ export const ApprovalsPage = () => {
                     >
                       <Visibility />
                     </IconButton>
-                    {timesheet.status === 'submitted' && (
+                    {(timesheet.status === 'submitted' || timesheet.status === 'resubmitted') && (
                       <>
                         <IconButton
                           size="small"
@@ -318,7 +388,7 @@ export const ApprovalsPage = () => {
             <>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={2.4}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Period
                   </Typography>
                   <Typography variant="body1">
@@ -326,7 +396,7 @@ export const ApprovalsPage = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={3.6}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Project
                   </Typography>
                   <Typography variant="body1">
@@ -334,7 +404,7 @@ export const ApprovalsPage = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={2}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Discipline
                   </Typography>
                   <Typography variant="body1">
@@ -342,7 +412,7 @@ export const ApprovalsPage = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={2}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Area
                   </Typography>
                   <Typography variant="body1">
@@ -350,13 +420,13 @@ export const ApprovalsPage = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={2}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Status
                   </Typography>
                   {getStatusChip(selectedTimesheet.status)}
                 </Grid>
                 <Grid item xs={12} md={2.4}>
-                  <Typography variant="subtitle2" color="textSecondary">
+                  <Typography variant="subtitle2" >
                     Submitted
                   </Typography>
                   <Typography variant="body1">
@@ -375,7 +445,7 @@ export const ApprovalsPage = () => {
                   <TableContainer sx={{ maxHeight: 500 }}>
                     <Table size="small" stickyHeader>
                       <TableHead>
-                        <TableRow>
+                        <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0f172a' : undefined }}>
                           <TableCell width="60px"><strong>Date</strong></TableCell>
                           <TableCell width="60px"><strong>Day</strong></TableCell>
                           <TableCell width="100px"><strong>Normal Hours</strong></TableCell>
@@ -392,13 +462,13 @@ export const ApprovalsPage = () => {
                           return (
                             <TableRow
                               key={index}
-                              sx={{ backgroundColor: isWeekend ? '#f5f5f5' : 'white' }}
+                              sx={{ backgroundColor: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? 'rgba(239,68,68,0.08)' : '#f5f5f5') : 'inherit' }}
                             >
                               <TableCell>{entryDate.format('DD')}</TableCell>
                               <TableCell>
                                 <Typography
                                   variant="body2"
-                                  color={isWeekend ? 'error' : 'textPrimary'}
+                                  sx={{ color: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? '#fca5a5' : 'error.main') : 'inherit' }}
                                 >
                                   {entryDate.format('ddd')}
                                 </Typography>
@@ -406,12 +476,12 @@ export const ApprovalsPage = () => {
                               <TableCell>{entry.normalHours || 0}</TableCell>
                               <TableCell>{entry.otHours || 0}</TableCell>
                               <TableCell>
-                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word', color: (theme) => theme.palette.text.primary }}>
                                   {entry.description || '-'}
                                 </Typography>
                               </TableCell>
                               <TableCell>
-                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                <Typography variant="body2" sx={{ whiteSpace: 'normal', wordBreak: 'break-word', color: (theme) => theme.palette.text.primary }}>
                                   {entry.detailedDescription || '-'}
                                 </Typography>
                               </TableCell>
@@ -421,7 +491,7 @@ export const ApprovalsPage = () => {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <Box sx={{ mt: 2, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
+                  <Box sx={{ mt: 2, p: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#e3f2fd', borderRadius: 1 }}>
                     <Grid container spacing={2}>
                       <Grid item xs={4}>
                         <Typography variant="h6">
@@ -443,7 +513,7 @@ export const ApprovalsPage = () => {
                 </CardContent>
               </Card>
 
-              {selectedTimesheet.status === 'submitted' && (
+              {(selectedTimesheet.status === 'submitted' || selectedTimesheet.status === 'resubmitted') && (
                 <TextField
                   fullWidth
                   multiline
@@ -457,7 +527,7 @@ export const ApprovalsPage = () => {
               )}
 
               {selectedTimesheet.comments && (
-                <Box sx={{ mt: 2, p: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                <Box sx={{ mt: 2, p: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.2)' : '#fff3e0', borderRadius: 1 }}>
                   <Typography variant="subtitle2">Comments:</Typography>
                   <Typography variant="body2">{selectedTimesheet.comments}</Typography>
                 </Box>
@@ -467,7 +537,7 @@ export const ApprovalsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Close</Button>
-          {selectedTimesheet?.status === 'submitted' && (
+          {(selectedTimesheet?.status === 'submitted' || selectedTimesheet?.status === 'resubmitted') && (
             <>
               <Button onClick={handleReject} color="error" variant="outlined">
                 Reject
@@ -482,3 +552,4 @@ export const ApprovalsPage = () => {
     </Container>
   );
 };
+

@@ -333,10 +333,10 @@ export const StaffManagementPage = () => {
   return (
     <Container maxWidth={false} sx={{ maxWidth: '95%' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           Staff Management
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" >
           Manage employee information and access
         </Typography>
       </Box>
@@ -551,7 +551,7 @@ export const StaffManagementPage = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {paginatedStaff.length === 0 ? (
             <Paper sx={{ p: 3, textAlign: 'center' }}>
-              <Typography color="textSecondary">No staff members found</Typography>
+              <Typography >No staff members found</Typography>
             </Paper>
           ) : (
             paginatedStaff.map((member) => (
@@ -569,7 +569,7 @@ export const StaffManagementPage = () => {
                       <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mb: 0.5 }}>
                         {`${member.firstName} ${member.lastName}`}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
+                      <Typography variant="body2"  sx={{ fontSize: '0.85rem' }}>
                         {member.designation || 'No designation'}
                       </Typography>
                     </Box>
@@ -583,7 +583,7 @@ export const StaffManagementPage = () => {
 
                   <Grid container spacing={1.5}>
                     <Grid item xs={6}>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      <Typography variant="caption"  sx={{ display: 'block', fontSize: '0.7rem' }}>
                         Employee No
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
@@ -591,7 +591,7 @@ export const StaffManagementPage = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      <Typography variant="caption"  sx={{ display: 'block', fontSize: '0.7rem' }}>
                         Hourly Rate
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
@@ -599,7 +599,7 @@ export const StaffManagementPage = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      <Typography variant="caption"  sx={{ display: 'block', fontSize: '0.7rem' }}>
                         Contact
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
@@ -607,7 +607,7 @@ export const StaffManagementPage = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      <Typography variant="caption"  sx={{ display: 'block', fontSize: '0.7rem' }}>
                         Department
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem' }}>
@@ -615,7 +615,7 @@ export const StaffManagementPage = () => {
                       </Typography>
                     </Grid>
                     <Grid item xs={12}>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                      <Typography variant="caption"  sx={{ display: 'block', fontSize: '0.7rem' }}>
                         Email
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem', wordBreak: 'break-word' }}>
@@ -635,8 +635,8 @@ export const StaffManagementPage = () => {
                         sx={{ 
                           fontSize: '0.8rem',
                           textTransform: 'none',
-                          borderColor: '#1976d2',
-                          color: '#1976d2'
+                          borderColor: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#1976d2',
+                          color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#1976d2'
                         }}
                       >
                         Edit
@@ -667,7 +667,7 @@ export const StaffManagementPage = () => {
         <TableContainer component={Paper} sx={{ boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.08)', sm: '0 4px 20px rgba(0,0,0,0.08)' }, overflowX: 'auto' }}>
           <Table sx={{ minWidth: { xs: 1200, md: '100%' }, tableLayout: { xs: 'auto', md: 'fixed' } }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+              <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : '#f5f7fa' }}>
                 <TableCell sx={{ width: { md: 180 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Employee No</TableCell>
                 <TableCell sx={{ width: { md: 120 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Hourly Rate</TableCell>
                 <TableCell sx={{ width: { md: 200 }, fontWeight: 700, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Name</TableCell>
@@ -692,7 +692,7 @@ export const StaffManagementPage = () => {
                   <TableRow 
                     key={member._id}
                     sx={{ 
-                      '&:hover': { bgcolor: '#f8f9fa' },
+                      '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#f8f9fa' },
                       transition: 'background-color 0.2s'
                     }}
                   >
@@ -711,8 +711,8 @@ export const StaffManagementPage = () => {
                           size="small" 
                           onClick={() => handleOpenDialog(member)}
                           sx={{ 
-                            color: '#1976d2',
-                            '&:hover': { bgcolor: '#e3f2fd' }
+                            color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#1976d2',
+                            '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.25)' : '#e3f2fd' }
                           }}
                         >
                           <Edit />
@@ -724,7 +724,12 @@ export const StaffManagementPage = () => {
                           title={member.status === 'inactive' ? 'Permanently Delete' : 'Deactivate'}
                           sx={{ 
                             '&:hover': { 
-                              bgcolor: member.status === 'inactive' ? '#ffebee' : '#fff8e1' 
+                              bgcolor: (theme) => {
+                                if (theme.palette.mode === 'dark') {
+                                  return member.status === 'inactive' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.25)';
+                                }
+                                return member.status === 'inactive' ? '#ffebee' : '#fff8e1';
+                              }
                             }
                           }}
                         >
@@ -911,7 +916,7 @@ export const StaffManagementPage = () => {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={handleCloseDialog} sx={{ color: '#757575' }}>Cancel</Button>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button 
             onClick={handleSubmit} 
             variant="contained"

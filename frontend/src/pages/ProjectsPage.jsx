@@ -142,10 +142,10 @@ export const ProjectsPage = () => {
   return (
     <Container maxWidth={false} sx={{ maxWidth: '95%', px: { xs: 1, sm: 2, md: 3 } }}>
       <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#030C69', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
           Projects
         </Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
           Manage company and contractor projects
         </Typography>
       </Box>
@@ -164,7 +164,7 @@ export const ProjectsPage = () => {
       <TableContainer component={Paper} sx={{ overflowX: 'auto', boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.08)', sm: '0 4px 20px rgba(0,0,0,0.08)' } }}>
         <Table sx={{ minWidth: { xs: 700, md: 'unset' } }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+            <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : '#f5f7fa' }}>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Code</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Name</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Company</TableCell>

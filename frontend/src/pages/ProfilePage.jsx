@@ -191,7 +191,7 @@ export const ProfilePage = () => {
     <Container maxWidth="md">
       <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#030C69' }}>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
             Profile Settings
           </Typography>
           <Button
@@ -224,7 +224,7 @@ export const ProfilePage = () => {
           <Button
             size="small"
             onClick={handleEditToggle}
-            sx={{ mb: 2, color: '#666' }}
+            sx={{ mb: 2 }}
           >
             Cancel
           </Button>

@@ -37,7 +37,7 @@ import {
   Pending
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { overtimeRequestService, projectService } from '../services';
 
 export const OvertimeRequestPage = () => {
   const { user } = useAuth();
@@ -84,8 +84,8 @@ export const OvertimeRequestPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/overtime-requests/my-requests');
-      setRequests(response.data.requests || []);
+      const response = await overtimeRequestService.getMyRequests();
+      setRequests(response.overtimeRequests || response.requests || []);
     } catch (err) {
       setError('Failed to load overtime requests');
     } finally {
@@ -95,8 +95,8 @@ export const OvertimeRequestPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await api.get('/projects');
-      setProjects(response.data.projects || []);
+      const response = await projectService.getAll();
+      setProjects(response.projects || []);
     } catch (err) {
       console.error('Failed to load projects:', err);
     }
@@ -159,10 +159,10 @@ export const OvertimeRequestPage = () => {
     try {
       setLoading(true);
       if (editingId) {
-        await api.put(`/overtime-requests/${editingId}`, formData);
+        await overtimeRequestService.update(editingId, formData);
         setSuccess('Overtime request updated successfully');
       } else {
-        await api.post('/overtime-requests', formData);
+        await overtimeRequestService.create(formData);
         setSuccess('Overtime request submitted successfully');
       }
       handleCloseDialog();
@@ -182,7 +182,7 @@ export const OvertimeRequestPage = () => {
 
     try {
       setLoading(true);
-      await api.delete(`/overtime-requests/${id}`);
+      await overtimeRequestService.delete(id);
       setSuccess('Overtime request deleted successfully');
       fetchRequests();
       setTimeout(() => setSuccess(''), 3000);
@@ -222,10 +222,10 @@ export const OvertimeRequestPage = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#030C69', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
           Overtime Requests
         </Typography>
-        <Typography variant="body1" color="textSecondary">
+        <Typography variant="body1">
           Request overtime hours for your projects
         </Typography>
       </Box>
@@ -252,7 +252,7 @@ export const OvertimeRequestPage = () => {
                   {pendingCount}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2">
                 Pending Requests
               </Typography>
             </CardContent>
@@ -267,7 +267,7 @@ export const OvertimeRequestPage = () => {
                   {approvedCount}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2">
                 Approved Requests
               </Typography>
             </CardContent>
