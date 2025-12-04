@@ -93,7 +93,7 @@ export const Layout = ({ children }) => {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
           <img 
-            src="/KLSB Diamond 1 .png" 
+            src="/timesheet/KLSB_Diamond_1.png" 
             alt="KLSB Logo" 
             style={{ height: '40px', width: 'auto' }}
           />

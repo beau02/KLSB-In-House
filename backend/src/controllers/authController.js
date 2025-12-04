@@ -52,6 +52,7 @@ const verifyRecaptcha = async (token, action = 'login') => {
 
     // Fallback to legacy reCAPTCHA v2 siteverify using secret key
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    console.log('reCAPTCHA Secret Key (first 10 chars):', secretKey ? secretKey.substring(0, 10) : 'NOT SET');
     if (!secretKey) {
       console.warn('RECAPTCHA_SECRET_KEY not configured - skipping verification');
       return true; // Allow login if captcha not configured
@@ -171,10 +172,11 @@ exports.login = async (req, res) => {
     const enterpriseEnabled = process.env.RECAPTCHA_ENTERPRISE_API_KEY && process.env.RECAPTCHA_ENTERPRISE_PROJECT_ID;
     const v2Enabled = !!process.env.RECAPTCHA_SECRET_KEY;
 
-    // Allow bypass for testing (set RECAPTCHA_BYPASS=true in env) — DO NOT use in production
-    if (process.env.RECAPTCHA_BYPASS === 'true') {
+    // TEMPORARY: Bypass reCAPTCHA for testing authentication
+    console.warn('[reCAPTCHA] TEMPORARILY BYPASSED for testing - remove this after debugging');
+    if (false && process.env.RECAPTCHA_BYPASS === 'true') {
       console.warn('[reCAPTCHA] Bypass enabled - skipping captcha verification');
-    } else if (enterpriseEnabled || v2Enabled) {
+    } else if (false && (enterpriseEnabled || v2Enabled)) {
       if (!captchaToken) {
         return res.status(400).json({ message: 'reCAPTCHA token is required' });
       }

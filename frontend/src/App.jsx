@@ -265,7 +265,7 @@ function AppContent() {
     <ThemeModeContext.Provider value={themeModeValue}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter>
+        <BrowserRouter basename="/timesheet">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
