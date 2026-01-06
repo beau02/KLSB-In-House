@@ -61,6 +61,52 @@ const sendVerificationEmail = async (toEmail, code) => {
   }
 };
 
+// Send password reset code email
+const sendPasswordResetEmail = async (toEmail, code) => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: toEmail,
+      subject: 'Password Reset Code - KLSB Timesheet',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #030C69 0%, #1a2d9e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">KLSB Timesheet</h1>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Password Reset</h2>
+            <p style="color: #666; font-size: 16px;">Use the verification code below to reset your password:</p>
+            
+            <div style="background: white; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;">
+              <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #030C69; font-family: monospace;">
+                ${code}
+              </div>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">This code will expire in <strong>10 minutes</strong>.</p>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this, please ignore this email.</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+            <p>© 2025 KLSB Timesheet Management System</p>
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Password reset email send error:', error);
+    throw new Error('Failed to send password reset email');
+  }
+};
+
 module.exports = {
-  sendVerificationEmail
+  sendVerificationEmail,
+  sendPasswordResetEmail
 };

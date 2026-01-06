@@ -13,15 +13,18 @@ import {
   DialogActions,
   Grid,
   Divider,
-  MenuItem
+  MenuItem,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
-import { Email, VerifiedUser, Edit, Save } from '@mui/icons-material';
+import { Email, VerifiedUser, Edit, Save, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 export const ProfilePage = () => {
   const { user, updateUser } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [step, setStep] = useState(1); // 1: enter email, 2: enter code
   const [newEmail, setNewEmail] = useState('');
@@ -37,6 +40,30 @@ export const ProfilePage = () => {
     designation: '',
     contactNo: '',
     department: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetStep, setResetStep] = useState(1);
+  const [resetCode, setResetCode] = useState('');
+  const [resetPasswordData, setResetPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [showResetPasswords, setShowResetPasswords] = useState({
+    new: false,
+    confirm: false
   });
 
   // Fetch fresh user data from backend on mount
@@ -137,6 +164,150 @@ export const ProfilePage = () => {
     setVerificationCode('');
     setError('');
     setSuccess('');
+  };
+
+  const handleChangePassword = async () => {
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setError('Please fill in all password fields');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api.post('/users/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setSuccess('Password changed successfully!');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      // Close dialog after delay
+      setTimeout(() => {
+        setPasswordDialogOpen(false);
+        setSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setPasswordDialogOpen(false);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const handleOpenResetDialog = () => {
+    setResetDialogOpen(true);
+    setResetStep(1);
+    setResetCode('');
+    setResetPasswordData({ newPassword: '', confirmPassword: '' });
+    setResetError('');
+    setResetSuccess('');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleCloseResetDialog = () => {
+    setResetDialogOpen(false);
+    setResetStep(1);
+    setResetCode('');
+    setResetPasswordData({ newPassword: '', confirmPassword: '' });
+    setResetError('');
+    setResetSuccess('');
+  };
+
+  const handleRequestResetCode = async () => {
+    setResetError('');
+    setResetSuccess('');
+    setResetLoading(true);
+
+    try {
+      const response = await api.post('/users/password-reset/request');
+      setResetSuccess('Reset code sent to your email');
+      setResetStep(2);
+
+      if (response.data.code) {
+        console.log('Password reset code:', response.data.code);
+      }
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Failed to send reset code');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyResetCode = async () => {
+    setResetError('');
+    setResetSuccess('');
+
+    if (!resetCode || resetCode.length !== 6) {
+      setResetError('Please enter the 6-digit reset code');
+      return;
+    }
+
+    if (!resetPasswordData.newPassword || !resetPasswordData.confirmPassword) {
+      setResetError('Please enter and confirm your new password');
+      return;
+    }
+
+    if (resetPasswordData.newPassword.length < 6) {
+      setResetError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
+      setResetError('New passwords do not match');
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      await api.post('/users/password-reset/verify', {
+        code: resetCode,
+        newPassword: resetPasswordData.newPassword
+      });
+
+      setResetSuccess('Password has been reset successfully!');
+      setResetPasswordData({ newPassword: '', confirmPassword: '' });
+      setResetCode('');
+
+      setTimeout(() => {
+        handleCloseResetDialog();
+      }, 2000);
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Invalid reset code');
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const handleEditToggle = () => {
@@ -391,6 +562,55 @@ export const ProfilePage = () => {
               </Button>
             </Box>
           </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+              <Box>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                  Password
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  ••••••••
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Lock />}
+                  onClick={() => {
+                    setError('');
+                    setSuccess('');
+                    setPasswordDialogOpen(true);
+                  }}
+                  disabled={editMode}
+                  sx={{ 
+                    borderColor: '#030C69',
+                    color: '#030C69',
+                    '&:hover': {
+                      borderColor: '#020850',
+                      backgroundColor: 'rgba(3, 12, 105, 0.04)'
+                    }
+                  }}
+                >
+                  Change Password
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleOpenResetDialog}
+                  disabled={editMode}
+                  sx={{
+                    background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                    }
+                  }}
+                >
+                  Reset Password
+                </Button>
+              </Box>
+            </Box>
+          </Grid>
         </Grid>
       </Paper>
 
@@ -475,6 +695,232 @@ export const ProfilePage = () => {
               }}
             >
               {loading ? 'Verifying...' : 'Verify'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Password Change Dialog */}
+      <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Change Password</DialogTitle>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {success}
+            </Alert>
+          )}
+
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Current Password"
+              type={showPasswords.current ? 'text' : 'password'}
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+              disabled={loading}
+              sx={{ mb: 2 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                      edge="end"
+                    >
+                      {showPasswords.current ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+            
+            <TextField
+              fullWidth
+              label="New Password"
+              type={showPasswords.new ? 'text' : 'password'}
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+              disabled={loading}
+              sx={{ mb: 2 }}
+              helperText="Must be at least 6 characters"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                      edge="end"
+                    >
+                      {showPasswords.new ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+            
+            <TextField
+              fullWidth
+              label="Confirm New Password"
+              type={showPasswords.confirm ? 'text' : 'password'}
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+              disabled={loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                      edge="end"
+                    >
+                      {showPasswords.confirm ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={handleClosePasswordDialog} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleChangePassword}
+            disabled={loading}
+            startIcon={<Lock />}
+            sx={{
+              background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+              }
+            }}
+          >
+            {loading ? 'Changing...' : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={resetDialogOpen} onClose={handleCloseResetDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{resetStep === 1 ? 'Reset Password' : 'Verify Reset Code'}</DialogTitle>
+        <DialogContent>
+          {resetError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {resetError}
+            </Alert>
+          )}
+          {resetSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {resetSuccess}
+            </Alert>
+          )}
+
+          {resetStep === 1 ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                We will send a 6-digit reset code to your email: <strong>{user?.email}</strong>
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleRequestResetCode}
+                disabled={resetLoading}
+                sx={{
+                  background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                  }
+                }}
+              >
+                {resetLoading ? 'Sending...' : 'Send Reset Code'}
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Reset Code"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                autoFocus
+                disabled={resetLoading}
+                inputProps={{ maxLength: 6, style: { letterSpacing: '0.5rem', textAlign: 'center', fontSize: '1.5rem' } }}
+              />
+
+              <TextField
+                fullWidth
+                label="New Password"
+                type={showResetPasswords.new ? 'text' : 'password'}
+                value={resetPasswordData.newPassword}
+                onChange={(e) => setResetPasswordData({ ...resetPasswordData, newPassword: e.target.value })}
+                disabled={resetLoading}
+                helperText="Must be at least 6 characters"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowResetPasswords({ ...showResetPasswords, new: !showResetPasswords.new })} edge="end">
+                        {showResetPasswords.new ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Confirm New Password"
+                type={showResetPasswords.confirm ? 'text' : 'password'}
+                value={resetPasswordData.confirmPassword}
+                onChange={(e) => setResetPasswordData({ ...resetPasswordData, confirmPassword: e.target.value })}
+                disabled={resetLoading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowResetPasswords({ ...showResetPasswords, confirm: !showResetPasswords.confirm })} edge="end">
+                        {showResetPasswords.confirm ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={handleCloseResetDialog} disabled={resetLoading}>
+            Cancel
+          </Button>
+          {resetStep === 1 ? (
+            <Button
+              variant="contained"
+              onClick={handleRequestResetCode}
+              disabled={resetLoading}
+              sx={{
+                background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                }
+              }}
+            >
+              {resetLoading ? 'Sending...' : 'Send Code'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleVerifyResetCode}
+              disabled={resetLoading}
+              startIcon={<Lock />}
+              sx={{
+                background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                }
+              }}
+            >
+              {resetLoading ? 'Verifying...' : 'Reset Password'}
             </Button>
           )}
         </DialogActions>

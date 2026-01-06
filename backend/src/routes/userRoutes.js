@@ -9,7 +9,10 @@ const {
   deleteUser,
   permanentDeleteUser,
   requestEmailChange,
-  verifyEmailChange
+  verifyEmailChange,
+  requestPasswordReset,
+  verifyPasswordReset,
+  changePassword
 } = require('../controllers/userController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -21,6 +24,13 @@ router.use(auth);
 // Email change routes (any authenticated user can change their own email)
 router.post('/change-email/request', requestEmailChange);
 router.post('/change-email/verify', verifyEmailChange);
+
+// Password change route
+router.post('/change-password', changePassword);
+
+// Password reset routes (authenticated users)
+router.post('/password-reset/request', requestPasswordReset);
+router.post('/password-reset/verify', verifyPasswordReset);
 
 // Self-access routes MUST be before /:id routes to avoid 'me' being treated as an ID
 router.get('/me', getCurrentUser);

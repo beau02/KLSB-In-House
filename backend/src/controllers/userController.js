@@ -1,9 +1,10 @@
 const User = require('../models/User');
 const crypto = require('crypto');
-const { sendVerificationEmail } = require('../utils/emailService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
 
 // Store verification codes temporarily (in production, use Redis or database)
 const verificationCodes = new Map();
+const passwordResetCodes = new Map();
 
 // @desc    Get all users/staff
 // @route   GET /api/users
@@ -364,3 +365,138 @@ exports.verifyEmailChange = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Request password reset code (authenticated user)
+// @route   POST /api/users/password-reset/request
+// @access  Private
+exports.requestPasswordReset = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store code with expiry (10 minutes)
+    const codeData = {
+      code,
+      userId,
+      email: user.email,
+      expiresAt: Date.now() + 10 * 60 * 1000
+    };
+    passwordResetCodes.set(userId, codeData);
+
+    // Send email with reset code
+    try {
+      await sendPasswordResetEmail(user.email, code);
+      console.log(`Password reset code sent to ${user.email}: ${code}`);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      // Continue; code is stored so user can still use it
+    }
+
+    res.json({
+      success: true,
+      message: 'Password reset code sent to your email',
+      code: process.env.NODE_ENV === 'development' ? code : undefined
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Verify password reset code and set new password
+// @route   POST /api/users/password-reset/verify
+// @access  Private
+exports.verifyPasswordReset = async (req, res) => {
+  try {
+    const { code, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!code || !newPassword) {
+      return res.status(400).json({ message: 'Code and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const codeData = passwordResetCodes.get(userId);
+    if (!codeData) {
+      return res.status(400).json({ message: 'No password reset request found' });
+    }
+
+    if (Date.now() > codeData.expiresAt) {
+      passwordResetCodes.delete(userId);
+      return res.status(400).json({ message: 'Reset code expired' });
+    }
+
+    if (code !== codeData.code) {
+      return res.status(400).json({ message: 'Invalid reset code' });
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    passwordResetCodes.delete(userId);
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Change password
+// @route   POST /api/users/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Please provide current and new password' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    // Get user with password
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
