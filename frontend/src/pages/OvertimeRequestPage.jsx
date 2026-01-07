@@ -63,23 +63,11 @@ export const OvertimeRequestPage = () => {
     fetchProjects();
   }, []);
 
-  // Area options - keep in sync with TimesheetsPage
-  const areaOptions = [
-    'NA',
-    'SOW 1 [BASED SCOPE]',
-    'SOW 2 [HOLD SCOPE]',
-    'VO-002',
-    'VO-003',
-    'VO-004',
-    'VO-005',
-    'VO-006',
-    'VO-007',
-    'VO-008',
-    'VO-009',
-    'VO-010',
-    'DATA REMEDIATION',
-    'DATA CONVERSION'
-  ];
+  const selectedProject = projects.find((project) => project._id === formData.projectId);
+  const projectAreaOptions = selectedProject?.areas || [];
+  const areaOptions = formData.area && !projectAreaOptions.includes(formData.area)
+    ? [...projectAreaOptions, formData.area]
+    : projectAreaOptions;
 
   const fetchRequests = async () => {
     try {
@@ -434,7 +422,10 @@ export const OvertimeRequestPage = () => {
               <Select
                 value={formData.projectId}
                 label="Project"
-                onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                onChange={(e) => {
+                  const projectId = e.target.value;
+                  setFormData({ ...formData, projectId, area: '' });
+                }}
               >
                 {projects.map((project) => (
                   <MenuItem key={project._id} value={project._id}>

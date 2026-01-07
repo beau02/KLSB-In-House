@@ -1,5 +1,23 @@
 const Project = require('../models/Project');
 
+const normalizeAreas = (areas) => {
+  if (!areas) return undefined;
+  const list = Array.isArray(areas) ? areas : [areas];
+  const seen = new Set();
+
+  const normalized = list
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length > 0)
+    .filter((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 // @desc    Get all projects
 // @route   GET /api/projects
 // @access  Private
@@ -49,7 +67,8 @@ exports.getProject = async (req, res) => {
 // @access  Private/Admin/Manager
 exports.createProject = async (req, res) => {
   try {
-    const { projectCode, projectName, description, startDate, endDate, company, contractor, teamMembers } = req.body;
+    const { projectCode, projectName, description, startDate, endDate, company, contractor, teamMembers, areas } = req.body;
+    const normalizedAreas = normalizeAreas(areas);
 
     // Check if project with same code AND name already exists
     // Allow same projectCode for different projectName values
@@ -66,7 +85,8 @@ exports.createProject = async (req, res) => {
       endDate,
       company,
       contractor,
-      teamMembers
+      teamMembers,
+      areas: normalizedAreas
     });
 
     res.status(201).json({
@@ -89,7 +109,8 @@ exports.updateProject = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const { projectName, description, startDate, endDate, status, company, contractor, teamMembers } = req.body;
+    const { projectName, description, startDate, endDate, status, company, contractor, teamMembers, areas } = req.body;
+    const normalizedAreas = normalizeAreas(areas);
 
     // Update fields
     if (projectName) project.projectName = projectName;
@@ -100,6 +121,7 @@ exports.updateProject = async (req, res) => {
     if (company) project.company = company;
     if (contractor) project.contractor = contractor;
     if (teamMembers) project.teamMembers = teamMembers;
+    if (normalizedAreas) project.areas = normalizedAreas;
 
     await project.save();
 
@@ -128,6 +150,44 @@ exports.deleteProject = async (req, res) => {
     res.json({
       success: true,
       message: 'Project deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Add an area to a project
+// @route   POST /api/projects/:id/areas
+// @access  Private/Admin
+exports.addProjectArea = async (req, res) => {
+  try {
+    const { area } = req.body;
+
+    if (!area || !String(area).trim()) {
+      return res.status(400).json({ message: 'Area name is required' });
+    }
+
+    const project = await Project.findById(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const normalizedArea = String(area).trim();
+    const hasDuplicate = (project.areas || []).some(
+      (existing) => existing.toLowerCase() === normalizedArea.toLowerCase()
+    );
+
+    if (hasDuplicate) {
+      return res.status(400).json({ message: 'Area already exists for this project' });
+    }
+
+    project.areas = [...(project.areas || []), normalizedArea];
+    await project.save();
+
+    res.json({
+      success: true,
+      project
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

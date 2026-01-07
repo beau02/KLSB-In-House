@@ -54,24 +54,6 @@ export const TimesheetsPage = () => {
 
   // Discipline codes
   const disciplineCodes = ['PMT', 'ADM', 'PRS', 'CIV', 'STR', 'PPG', 'ARC', 'MEC', 'ELE', 'INS', 'TEL', 'GEN', 'DCS'];
-  
-  // Area options
-  const areaOptions = [
-    'NA',
-    'SOW 1 [BASED SCOPE]',
-    'SOW 2 [HOLD SCOPE]',
-    'VO-002',
-    'VO-003',
-    'VO-004',
-    'VO-005',
-    'VO-006',
-    'VO-007',
-    'VO-008',
-    'VO-009',
-    'VO-010',
-    'DATA REMEDIATION',
-    'DATA CONVERSION'
-  ];
 
   // Activity descriptions
   const activityDescriptions = [
@@ -105,6 +87,12 @@ export const TimesheetsPage = () => {
     { value: 'PH', label: 'PH - Public Holiday', hours: 0 },
     { value: 'CL', label: 'CL - Compassionate leave', hours: 0 }
   ];
+
+  const selectedProject = projects.find((project) => project._id === formData.projectId);
+  const projectAreaOptions = selectedProject?.areas || [];
+  const areaOptions = formData.area && !projectAreaOptions.includes(formData.area)
+    ? [...projectAreaOptions, formData.area]
+    : projectAreaOptions;
 
   useEffect(() => {
     loadData();
@@ -220,13 +208,17 @@ export const TimesheetsPage = () => {
     const newEntries = [...formData.entries];
     
     if (field === 'normalHours' || field === 'otHours') {
-      // Block OT hours if there's a rejected OT request for this date
-      if (field === 'otHours' && isOTBlockedForDate(newEntries[index].date)) {
-        alert('Cannot enter OT hours for this date. Your OT request was rejected.');
-        return;
+      const numValue = value === '' ? 0 : parseFloat(value) || 0;
+      
+      // Block OT hours if there's no approved OT request for this date
+      if (field === 'otHours' && numValue > 0) {
+        const validation = validateOTHours(newEntries[index].date, numValue);
+        if (!validation.isValid) {
+          alert(validation.message);
+          return;
+        }
       }
       
-      const numValue = value === '' ? 0 : parseFloat(value) || 0;
       newEntries[index][field] = numValue;
     } else if (field === 'hoursCode') {
       const legendItem = hoursLegend.find(h => h.value === value);
@@ -248,15 +240,18 @@ export const TimesheetsPage = () => {
 
   const handleSubmit = async () => {
     try {
-      // Validate that no OT hours are entered on rejected dates
+      // Validate that OT hours have approved requests
       const invalidEntries = formData.entries.filter(entry => {
-        const rejectedOT = isOTBlockedForDate(entry.date);
-        return rejectedOT && entry.otHours > 0;
+        if (entry.otHours > 0) {
+          const validation = validateOTHours(entry.date, entry.otHours);
+          return !validation.isValid;
+        }
+        return false;
       });
 
       if (invalidEntries.length > 0) {
         const dates = invalidEntries.map(e => moment(e.date).format('MMM DD')).join(', ');
-        alert(`Cannot save timesheet. OT hours are entered for dates with rejected OT requests: ${dates}`);
+        alert(`Cannot save timesheet. OT hours on these dates require approved OT requests: ${dates}`);
         return;
       }
 
@@ -319,29 +314,45 @@ export const TimesheetsPage = () => {
     return timesheet && ['approved', 'submitted', 'resubmitted'].includes(timesheet.status);
   };
 
-  const isOTBlockedForDate = (date) => {
+  const validateOTHours = (date, hours) => {
     const dateStr = moment(date).format('YYYY-MM-DD');
     const currentProjectId = formData.projectId;
     
-    console.log('Checking OT block for date:', dateStr, 'Project:', currentProjectId, 'Total OT requests:', overtimeRequests.length);
+    if (!currentProjectId) {
+      return {
+        isValid: false,
+        message: 'Please select a project first before entering OT hours.'
+      };
+    }
     
-    const rejectedRequest = overtimeRequests.find(req => {
+    console.log('Validating OT for date:', dateStr, 'Hours:', hours, 'Project:', currentProjectId);
+    
+    // Find approved OT request for this date and project
+    const approvedRequest = overtimeRequests.find(req => {
       const reqDateStr = moment(req.date).format('YYYY-MM-DD');
       const reqProjectId = req.projectId?._id || req.projectId;
       
-      console.log('  Comparing - Date:', reqDateStr, 'Project:', reqProjectId, 'Status:', req.status);
-      
-      // Block only if BOTH date AND project match, and status is rejected
       return reqDateStr === dateStr && 
              reqProjectId === currentProjectId && 
-             req.status === 'rejected';
+             req.status === 'approved';
     });
     
-    if (rejectedRequest) {
-      console.log('  ✓ Found rejected OT for this date+project:', dateStr, rejectedRequest);
+    if (!approvedRequest) {
+      return {
+        isValid: false,
+        message: `Cannot enter OT hours for ${moment(date).format('MMM DD, YYYY')}. You need an approved OT request for this date and project first.`
+      };
     }
     
-    return rejectedRequest;
+    // Check if hours exceed approved amount
+    if (hours > approvedRequest.hours) {
+      return {
+        isValid: false,
+        message: `OT hours (${hours}) exceed approved amount (${approvedRequest.hours} hrs) for ${moment(date).format('MMM DD, YYYY')}.`
+      };
+    }
+    
+    return { isValid: true };
   };
 
   if (loading) {
@@ -477,7 +488,10 @@ export const TimesheetsPage = () => {
                 <Select
                   value={formData.projectId}
                   label="Project *"
-                  onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                  onChange={(e) => {
+                    const projectId = e.target.value;
+                    setFormData({ ...formData, projectId, area: '' });
+                  }}
                   disabled={!!selectedTimesheet}
                 >
                   {projects.map((project) => (
@@ -624,38 +638,51 @@ export const TimesheetsPage = () => {
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              const rejectedOT = isOTBlockedForDate(entry.date);
-                              const isOTDisabled = isReadOnly(selectedTimesheet) || rejectedOT;
+                              // Check if there's an approved OT request for this date
+                              const dateStr = moment(entry.date).format('YYYY-MM-DD');
+                              const approvedOT = overtimeRequests.find(req => {
+                                const reqDateStr = moment(req.date).format('YYYY-MM-DD');
+                                const reqProjectId = req.projectId?._id || req.projectId;
+                                return reqDateStr === dateStr && 
+                                       reqProjectId === formData.projectId && 
+                                       req.status === 'approved';
+                              });
                               
-                              return rejectedOT ? (
-                                <Tooltip title={`OT request rejected: ${rejectedOT.rejectionReason || 'No reason provided'}`} arrow>
+                              const hasApprovedOT = !!approvedOT;
+                              const isOTDisabled = isReadOnly(selectedTimesheet) || !hasApprovedOT;
+                              
+                              return !hasApprovedOT && !isReadOnly(selectedTimesheet) ? (
+                                <Tooltip title="No approved OT request for this date. Submit an OT request first." arrow>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <TextField
                                       type="number"
                                       size="small"
                                       fullWidth
-                                      value={0}
+                                      value={entry.otHours || ''}
                                       disabled
+                                      placeholder="0"
                                       sx={{
                                         '& .MuiInputBase-input.Mui-disabled': {
-                                          WebkitTextFillColor: (theme) => theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626',
+                                          WebkitTextFillColor: (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : '#64748b',
                                           cursor: 'not-allowed'
                                         }
                                       }}
                                     />
-                                    <Block sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626', fontSize: 20 }} />
+                                    <Block sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : '#64748b', fontSize: 20 }} />
                                   </Box>
                                 </Tooltip>
                               ) : (
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  fullWidth
-                                  value={entry.otHours || ''}
-                                  onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
-                                  inputProps={{ min: 0, max: 24, step: 0.5 }}
-                                  disabled={isReadOnly(selectedTimesheet)}
-                                />
+                                <Tooltip title={hasApprovedOT ? `Approved: ${approvedOT.hours} hrs` : ''} arrow>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    fullWidth
+                                    value={entry.otHours || ''}
+                                    onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
+                                    inputProps={{ min: 0, max: approvedOT?.hours || 24, step: 0.5 }}
+                                    disabled={isReadOnly(selectedTimesheet)}
+                                  />
+                                </Tooltip>
                               );
                             })()}
                           </TableCell>

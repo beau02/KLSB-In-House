@@ -4,7 +4,8 @@ const {
   getProject,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  addProjectArea
 } = require('../controllers/projectController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -16,6 +17,8 @@ router.use(auth);
 router.route('/')
   .get(getAllProjects)
   .post(authorize('admin', 'manager'), createProject);
+
+router.post('/:id/areas', authorize('admin'), addProjectArea);
 
 router.route('/:id')
   .get(getProject)

@@ -38,6 +38,13 @@ const projectSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  areas: {
+    type: [{
+      type: String,
+      trim: true
+    }],
+    default: []
+  },
   teamMembers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

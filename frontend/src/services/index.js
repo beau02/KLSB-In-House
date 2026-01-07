@@ -102,6 +102,11 @@ export const projectService = {
     return response.data;
   },
 
+  addArea: async (id, area) => {
+    const response = await api.post(`/projects/${id}/areas`, { area });
+    return response.data;
+  },
+
   delete: async (id) => {
     const response = await api.delete(`/projects/${id}`);
     return response.data;

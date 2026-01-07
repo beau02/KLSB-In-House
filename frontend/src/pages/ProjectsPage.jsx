@@ -19,17 +19,24 @@ import {
   TextField,
   MenuItem,
   Box,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import moment from 'moment';
 import { projectService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 
 export const ProjectsPage = () => {
+  const { isAdmin } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [areaDialogOpen, setAreaDialogOpen] = useState(false);
+  const [areaProject, setAreaProject] = useState(null);
+  const [newArea, setNewArea] = useState('');
+  const [savingArea, setSavingArea] = useState(false);
   const [formData, setFormData] = useState({
     projectCode: '',
     projectName: '',
@@ -85,6 +92,18 @@ export const ProjectsPage = () => {
     setDialogOpen(true);
   };
 
+  const handleOpenAreaDialog = (project) => {
+    setAreaProject(project);
+    setNewArea('');
+    setAreaDialogOpen(true);
+  };
+
+  const handleCloseAreaDialog = () => {
+    setAreaDialogOpen(false);
+    setAreaProject(null);
+    setNewArea('');
+  };
+
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedProject(null);
@@ -118,6 +137,28 @@ export const ProjectsPage = () => {
         console.error('Error response:', error.response);
         alert(error.response?.data?.message || 'Error deleting project');
       }
+    }
+  };
+
+  const handleAddArea = async () => {
+    if (!areaProject?._id) return;
+
+    const trimmedArea = newArea.trim();
+    if (!trimmedArea) {
+      alert('Please enter an area name');
+      return;
+    }
+
+    try {
+      setSavingArea(true);
+      await projectService.addArea(areaProject._id, trimmedArea);
+      handleCloseAreaDialog();
+      loadData();
+    } catch (error) {
+      console.error('Error adding area:', error);
+      alert(error.response?.data?.message || 'Error adding area');
+    } finally {
+      setSavingArea(false);
     }
   };
 
@@ -169,6 +210,7 @@ export const ProjectsPage = () => {
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Name</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Company</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Contractor</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Areas</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Start Date</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Status</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Actions</TableCell>
@@ -188,9 +230,32 @@ export const ProjectsPage = () => {
                   <TableCell>{project.projectName}</TableCell>
                   <TableCell>{project.company || '-'}</TableCell>
                   <TableCell>{project.contractor || '-'}</TableCell>
+                  <TableCell>
+                    {project.areas?.length ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {project.areas.slice(0, 3).map((area) => (
+                          <Chip key={area} label={area} size="small" />
+                        ))}
+                        {project.areas.length > 3 && (
+                          <Typography variant="caption" color="textSecondary">
+                            +{project.areas.length - 3} more
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : (
+                      '-' 
+                    )}
+                  </TableCell>
                   <TableCell>{moment(project.startDate).format('MMM DD, YYYY')}</TableCell>
                   <TableCell>{getStatusChip(project.status)}</TableCell>
                   <TableCell>
+                    {isAdmin && (
+                      <Tooltip title="Add area">
+                        <IconButton size="small" onClick={() => handleOpenAreaDialog(project)}>
+                          <Add />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <IconButton size="small" onClick={() => handleOpenDialog(project)}>
                       <Edit />
                     </IconButton>
@@ -287,6 +352,41 @@ export const ProjectsPage = () => {
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained">
             {selectedProject ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={areaDialogOpen} onClose={handleCloseAreaDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Area to Project</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            {areaProject ? `${areaProject.projectCode} - ${areaProject.projectName}` : ''}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Areas are used in timesheets and overtime requests for this project.
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 2 }}>
+            {areaProject?.areas?.length ? (
+              areaProject.areas.map((area) => (
+                <Chip key={area} label={area} size="small" />
+              ))
+            ) : (
+              <Typography variant="body2" color="textSecondary">No areas yet</Typography>
+            )}
+          </Box>
+          <TextField
+            fullWidth
+            label="New Area Name"
+            value={newArea}
+            onChange={(e) => setNewArea(e.target.value)}
+            placeholder="e.g. SOW 1"
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAreaDialog}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddArea} disabled={savingArea}>
+            {savingArea ? 'Adding...' : 'Add Area'}
           </Button>
         </DialogActions>
       </Dialog>
