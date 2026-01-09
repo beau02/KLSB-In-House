@@ -38,9 +38,12 @@ const projectSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  platform: {
-    type: String,
-    trim: true
+  platforms: {
+    type: [{
+      type: String,
+      trim: true
+    }],
+    default: []
   },
   areas: {
     type: [{

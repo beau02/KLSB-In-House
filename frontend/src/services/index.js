@@ -107,6 +107,11 @@ export const projectService = {
     return response.data;
   },
 
+  addPlatform: async (id, platform) => {
+    const response = await api.post(`/projects/${id}/platforms`, { platform });
+    return response.data;
+  },
+
   delete: async (id) => {
     const response = await api.delete(`/projects/${id}`);
     return response.data;

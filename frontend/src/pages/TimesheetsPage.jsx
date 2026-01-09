@@ -95,6 +95,11 @@ export const TimesheetsPage = () => {
     ? [...projectAreaOptions, formData.area]
     : projectAreaOptions;
 
+  const projectPlatformOptions = selectedProject?.platforms || [];
+  const platformOptions = formData.platform && !projectPlatformOptions.includes(formData.platform)
+    ? [...projectPlatformOptions, formData.platform]
+    : projectPlatformOptions;
+
   const toDisciplineArray = (value) => {
     if (!value) return [];
     return Array.isArray(value) ? value : [value];
@@ -511,7 +516,7 @@ export const TimesheetsPage = () => {
                       ...formData, 
                       projectId, 
                       area: '',
-                      platform: selectedProj?.platform || ''
+                      platform: selectedProj?.platforms?.[0] || ''
                     });
                   }}
                   disabled={!!selectedTimesheet}
@@ -542,15 +547,21 @@ export const TimesheetsPage = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>              <TextField
-                fullWidth
-                label="Platform"
-                value={formData.platform}
-                onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                margin="normal"
-                disabled={isReadOnly(selectedTimesheet)}
-                placeholder="e.g. PDMS, E3D"
-              />
+            <Grid item xs={12} sm={6} md={2.4}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Platform</InputLabel>
+                <Select
+                  value={formData.platform}
+                  label="Platform"
+                  onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                  disabled={isReadOnly(selectedTimesheet)}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {platformOptions.map((platform) => (
+                    <MenuItem key={platform} value={platform}>{platform}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={6} md={2.4}>              <FormControl fullWidth margin="normal">

@@ -37,6 +37,10 @@ export const ProjectsPage = () => {
   const [areaProject, setAreaProject] = useState(null);
   const [newArea, setNewArea] = useState('');
   const [savingArea, setSavingArea] = useState(false);
+  const [platformDialogOpen, setPlatformDialogOpen] = useState(false);
+  const [platformProject, setPlatformProject] = useState(null);
+  const [newPlatform, setNewPlatform] = useState('');
+  const [savingPlatform, setSavingPlatform] = useState(false);
   const [formData, setFormData] = useState({
     projectCode: '',
     projectName: '',
@@ -45,7 +49,6 @@ export const ProjectsPage = () => {
     endDate: '',
     company: '',
     contractor: '',
-    platform: '',
     status: 'active'
   });
 
@@ -75,7 +78,6 @@ export const ProjectsPage = () => {
         endDate: project.endDate ? moment(project.endDate).format('YYYY-MM-DD') : '',
         company: project.company || '',
         contractor: project.contractor || '',
-        platform: project.platform || '',
         status: project.status
       });
     } else {
@@ -88,7 +90,6 @@ export const ProjectsPage = () => {
         endDate: '',
         company: '',
         contractor: '',
-        platform: '',
         status: 'active'
       });
     }
@@ -105,6 +106,18 @@ export const ProjectsPage = () => {
     setAreaDialogOpen(false);
     setAreaProject(null);
     setNewArea('');
+  };
+
+  const handleOpenPlatformDialog = (project) => {
+    setPlatformProject(project);
+    setNewPlatform('');
+    setPlatformDialogOpen(true);
+  };
+
+  const handleClosePlatformDialog = () => {
+    setPlatformDialogOpen(false);
+    setPlatformProject(null);
+    setNewPlatform('');
   };
 
   const handleCloseDialog = () => {
@@ -165,6 +178,28 @@ export const ProjectsPage = () => {
     }
   };
 
+  const handleAddPlatform = async () => {
+    if (!platformProject?._id) return;
+
+    const trimmedPlatform = newPlatform.trim();
+    if (!trimmedPlatform) {
+      alert('Please enter a platform name');
+      return;
+    }
+
+    try {
+      setSavingPlatform(true);
+      await projectService.addPlatform(platformProject._id, trimmedPlatform);
+      handleClosePlatformDialog();
+      loadData();
+    } catch (error) {
+      console.error('Error adding platform:', error);
+      alert(error.response?.data?.message || 'Error adding platform');
+    } finally {
+      setSavingPlatform(false);
+    }
+  };
+
   const getStatusChip = (status) => {
     const colors = {
       active: 'success',
@@ -213,7 +248,7 @@ export const ProjectsPage = () => {
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Name</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Company</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Contractor</TableCell>
-            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Platform</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Platforms</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Areas</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Start Date</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Status</TableCell>
@@ -234,7 +269,22 @@ export const ProjectsPage = () => {
                   <TableCell>{project.projectName}</TableCell>
                   <TableCell>{project.company || '-'}</TableCell>
                   <TableCell>{project.contractor || '-'}</TableCell>
-                  <TableCell>{project.platform || '-'}</TableCell>
+                  <TableCell>
+                    {project.platforms?.length ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {project.platforms.slice(0, 2).map((platform) => (
+                          <Chip key={platform} label={platform} size="small" color="secondary" />
+                        ))}
+                        {project.platforms.length > 2 && (
+                          <Typography variant="caption" color="textSecondary">
+                            +{project.platforms.length - 2} more
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : (
+                      '-' 
+                    )}
+                  </TableCell>
                   <TableCell>
                     {project.areas?.length ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -255,11 +305,18 @@ export const ProjectsPage = () => {
                   <TableCell>{getStatusChip(project.status)}</TableCell>
                   <TableCell>
                     {isAdmin && (
-                      <Tooltip title="Add area">
-                        <IconButton size="small" onClick={() => handleOpenAreaDialog(project)}>
-                          <Add />
-                        </IconButton>
-                      </Tooltip>
+                      <>
+                        <Tooltip title="Add platform">
+                          <IconButton size="small" onClick={() => handleOpenPlatformDialog(project)}>
+                            <Add />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Add area">
+                          <IconButton size="small" onClick={() => handleOpenAreaDialog(project)}>
+                            <Add />
+                          </IconButton>
+                        </Tooltip>
+                      </>
                     )}
                     <IconButton size="small" onClick={() => handleOpenDialog(project)}>
                       <Edit />
@@ -319,14 +376,6 @@ export const ProjectsPage = () => {
             value={formData.contractor}
             onChange={(e) => setFormData({ ...formData, contractor: e.target.value })}
             margin="normal"
-          />
-          <TextField
-            fullWidth
-            label="Platform"
-            value={formData.platform}
-            onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-            margin="normal"
-            placeholder="e.g. PDMS, E3D, SmartPlant, AutoCAD Plant 3D"
           />
           <TextField
             fullWidth
@@ -400,6 +449,41 @@ export const ProjectsPage = () => {
           <Button onClick={handleCloseAreaDialog}>Cancel</Button>
           <Button variant="contained" onClick={handleAddArea} disabled={savingArea}>
             {savingArea ? 'Adding...' : 'Add Area'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={platformDialogOpen} onClose={handleClosePlatformDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Platform to Project</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            {platformProject ? `${platformProject.projectCode} - ${platformProject.projectName}` : ''}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Platforms are used in timesheets for this project (e.g., PDMS, E3D, SmartPlant).
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 2 }}>
+            {platformProject?.platforms?.length ? (
+              platformProject.platforms.map((platform) => (
+                <Chip key={platform} label={platform} size="small" color="secondary" />
+              ))
+            ) : (
+              <Typography variant="body2" color="textSecondary">No platforms yet</Typography>
+            )}
+          </Box>
+          <TextField
+            fullWidth
+            label="New Platform Name"
+            value={newPlatform}
+            onChange={(e) => setNewPlatform(e.target.value)}
+            placeholder="e.g. PDMS, E3D, SmartPlant"
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePlatformDialog}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddPlatform} disabled={savingPlatform}>
+            {savingPlatform ? 'Adding...' : 'Add Platform'}
           </Button>
         </DialogActions>
       </Dialog>

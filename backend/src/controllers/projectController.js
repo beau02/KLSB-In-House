@@ -193,3 +193,41 @@ exports.addProjectArea = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Add a platform to a project
+// @route   POST /api/projects/:id/platforms
+// @access  Private/Admin
+exports.addProjectPlatform = async (req, res) => {
+  try {
+    const { platform } = req.body;
+
+    if (!platform || !String(platform).trim()) {
+      return res.status(400).json({ message: 'Platform name is required' });
+    }
+
+    const project = await Project.findById(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const normalizedPlatform = String(platform).trim();
+    const hasDuplicate = (project.platforms || []).some(
+      (existing) => existing.toLowerCase() === normalizedPlatform.toLowerCase()
+    );
+
+    if (hasDuplicate) {
+      return res.status(400).json({ message: 'Platform already exists for this project' });
+    }
+
+    project.platforms = [...(project.platforms || []), normalizedPlatform];
+    await project.save();
+
+    res.json({
+      success: true,
+      project
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
