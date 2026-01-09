@@ -38,12 +38,12 @@ const normalizeEntriesWithDiscipline = (entries = []) => {
   return entries.map((entry) => {
     const codes = normalizeDisciplineCodes(
       entry.disciplineCodes !== undefined ? entry.disciplineCodes : entry.disciplineCode,
-      { required: true }
+      { required: false }
     );
 
     return {
       ...entry,
-      disciplineCodes: codes
+      disciplineCodes: codes || []
     };
   });
 };
@@ -191,7 +191,20 @@ exports.createTimesheet = async (req, res) => {
     const { projectId, area, month, year } = req.body;
     const userId = req.user.id;
 
+    console.log('=== CREATE TIMESHEET REQUEST ===');
+    console.log('User ID:', userId);
+    console.log('Project ID:', projectId);
+    console.log('Area:', area);
+    console.log('Month:', month);
+    console.log('Year:', year);
+    console.log('Entries count:', req.body.entries?.length || 0);
+    console.log('First entry:', req.body.entries?.[0]);
+    console.log('================================');
+
     const normalizedEntries = normalizeEntriesWithDiscipline(req.body.entries || []);
+
+    console.log('Normalized entries:', normalizedEntries.length);
+    console.log('First normalized entry:', normalizedEntries[0]);
 
     // Only one timesheet per user/project/month/year
     const existingTimesheet = await Timesheet.findOne({
@@ -216,6 +229,8 @@ exports.createTimesheet = async (req, res) => {
       entries: normalizedEntries
     });
 
+    console.log('Timesheet created:', timesheet._id);
+
     await timesheet.populate('projectId', 'projectCode projectName');
 
     res.status(201).json({
@@ -223,7 +238,14 @@ exports.createTimesheet = async (req, res) => {
       timesheet
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('=== CREATE TIMESHEET ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    if (error.errors) {
+      console.error('Validation errors:', error.errors);
+    }
+    console.error('==============================');
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 

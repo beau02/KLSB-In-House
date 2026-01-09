@@ -276,22 +276,45 @@ export const TimesheetsPage = () => {
         return;
       }
 
+      // Convert string dates to Date objects
+      const entries = formData.entries.map(entry => ({
+        ...entry,
+        date: new Date(entry.date)
+      }));
+
       const payload = {
-        ...formData,
-        area: formData.area
+        projectId: formData.projectId,
+        area: formData.area,
+        month: formData.month,
+        year: formData.year,
+        entries: entries
       };
       
+      console.log('=== TIMESHEET PAYLOAD ===');
+      console.log('Payload:', payload);
+      console.log('Entries count:', entries.length);
+      console.log('First entry:', entries[0]);
+      console.log('======================');
+      
       if (selectedTimesheet) {
+        console.log('Updating timesheet:', selectedTimesheet._id);
         await timesheetService.update(selectedTimesheet._id, payload);
       } else {
-        await timesheetService.create(payload);
+        console.log('Creating new timesheet');
+        const response = await timesheetService.create(payload);
+        console.log('Create response:', response);
       }
       
       handleCloseDialog();
       loadData();
     } catch (error) {
-      console.error('Error saving timesheet:', error);
-      alert(error.response?.data?.message || 'Error saving timesheet');
+      console.error('=== ERROR DETAILS ===');
+      console.error('Full error:', error);
+      console.error('Error message:', error.message);
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
+      console.error('===================');
+      alert(error.response?.data?.message || error.message || 'Error saving timesheet');
     }
   };
 
@@ -797,7 +820,7 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={isReadOnly(selectedTimesheet) || !formData.projectId || formData.entries.some(e => !e.disciplineCodes || e.disciplineCodes.length === 0)}
+            disabled={isReadOnly(selectedTimesheet) || !formData.projectId}
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

@@ -8,27 +8,24 @@ const timesheetEntrySchema = new mongoose.Schema({
   disciplineCodes: {
     type: [String],
     set: (codes) => {
-      if (codes === undefined || codes === null) return undefined;
+      if (codes === undefined || codes === null) return [];
       const normalized = (Array.isArray(codes) ? codes : [codes])
         .map((code) => (code || '').toString().trim().toUpperCase())
         .filter(Boolean);
       const unique = Array.from(new Set(normalized));
       return unique.slice(0, 8);
     },
-    validate: [
-      {
-        validator: function (arr) {
-          return Array.isArray(arr) && arr.length > 0;
-        },
-        message: 'At least one discipline code is required per entry.'
+    validate: {
+      validator: function (arr) {
+        return Array.isArray(arr) && arr.length <= 8;
       },
-      {
-        validator: function (arr) {
-          return Array.isArray(arr) && arr.length <= 8;
-        },
-        message: 'You can select up to 8 discipline codes per entry.'
-      }
-    ]
+      message: 'You can select up to 8 discipline codes per entry.'
+    }
+  },
+  platform: {
+    type: String,
+    trim: true,
+    default: ''
   },
   normalHours: {
     type: Number,
