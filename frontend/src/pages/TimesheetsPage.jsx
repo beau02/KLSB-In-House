@@ -46,7 +46,6 @@ export const TimesheetsPage = () => {
   const [formData, setFormData] = useState({
     projectId: '',
     area: '',
-    platform: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     entries: []
@@ -95,11 +94,6 @@ export const TimesheetsPage = () => {
     ? [...projectAreaOptions, formData.area]
     : projectAreaOptions;
 
-  const projectPlatformOptions = selectedProject?.platforms || [];
-  const platformOptions = formData.platform && !projectPlatformOptions.includes(formData.platform)
-    ? [...projectPlatformOptions, formData.platform]
-    : projectPlatformOptions;
-
   const toDisciplineArray = (value) => {
     if (!value) return [];
     return Array.isArray(value) ? value : [value];
@@ -137,6 +131,7 @@ export const TimesheetsPage = () => {
       entries.push({
         date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         disciplineCodes: [],
+        platform: '',
         normalHours: 0,
         otHours: 0,
         hoursCode: '0',
@@ -165,6 +160,7 @@ export const TimesheetsPage = () => {
       const migratedEntries = (timesheet.entries || []).map(entry => ({
         date: entry.date,
         disciplineCodes: toDisciplineArray(entry.disciplineCodes || entry.disciplineCode || timesheet.disciplineCode),
+        platform: entry.platform || timesheet.platform || '',
         normalHours: entry.normalHours !== undefined ? entry.normalHours : (entry.hours || 0),
         otHours: entry.otHours !== undefined ? entry.otHours : 0,
         hoursCode: entry.hoursCode !== undefined ? entry.hoursCode : 
@@ -176,7 +172,6 @@ export const TimesheetsPage = () => {
       setFormData({
         projectId: timesheet.projectId._id,
         area: timesheet.area || '',
-        platform: timesheet.platform || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
@@ -189,7 +184,6 @@ export const TimesheetsPage = () => {
       setFormData({
         projectId: '',
         area: '',
-        platform: '',
         month: currentMonth,
         year: currentYear,
         entries: generateEmptyEntries(currentMonth, currentYear)
@@ -259,6 +253,12 @@ export const TimesheetsPage = () => {
     setFormData({ ...formData, entries: newEntries });
   };
 
+  const handleEntryPlatformChange = (index, value) => {
+    const newEntries = [...formData.entries];
+    newEntries[index] = { ...newEntries[index], platform: value };
+    setFormData({ ...formData, entries: newEntries });
+  };
+
   const handleSubmit = async () => {
     try {
       // Validate that OT hours have approved requests
@@ -278,8 +278,7 @@ export const TimesheetsPage = () => {
 
       const payload = {
         ...formData,
-        area: formData.area,
-        platform: formData.platform
+        area: formData.area
       };
       
       if (selectedTimesheet) {
@@ -547,23 +546,6 @@ export const TimesheetsPage = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Platform</InputLabel>
-                <Select
-                  value={formData.platform}
-                  label="Platform"
-                  onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                  disabled={isReadOnly(selectedTimesheet)}
-                >
-                  <MenuItem value="">None</MenuItem>
-                  {platformOptions.map((platform) => (
-                    <MenuItem key={platform} value={platform}>{platform}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
             <Grid item xs={12} sm={6} md={2.4}>              <FormControl fullWidth margin="normal">
                 <InputLabel>Month *</InputLabel>
                 <Select
@@ -606,6 +588,7 @@ export const TimesheetsPage = () => {
                       <TableCell width="60px"><strong>Date</strong></TableCell>
                       <TableCell width="60px"><strong>Day</strong></TableCell>
                       <TableCell width="200px"><strong>Discipline Code</strong></TableCell>
+                      <TableCell width="150px"><strong>Platform</strong></TableCell>
                       <TableCell width="200px"><strong>Normal Hours</strong></TableCell>
                       <TableCell width="100px"><strong>OT Hours</strong></TableCell>
                       <TableCell width="260px"><strong>Description</strong></TableCell>
@@ -644,6 +627,21 @@ export const TimesheetsPage = () => {
                                   >
                                     {code}
                                   </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </TableCell>
+                          <TableCell>
+                            <FormControl size="small" fullWidth>
+                              <Select
+                                value={entry.platform || ''}
+                                onChange={(e) => handleEntryPlatformChange(index, e.target.value)}
+                                disabled={isReadOnly(selectedTimesheet)}
+                                displayEmpty
+                              >
+                                <MenuItem value=""><em>None</em></MenuItem>
+                                {selectedProject?.platforms?.map((platform) => (
+                                  <MenuItem key={platform} value={platform}>{platform}</MenuItem>
                                 ))}
                               </Select>
                             </FormControl>
