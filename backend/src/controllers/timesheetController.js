@@ -2,6 +2,38 @@ const Timesheet = require('../models/Timesheet');
 const User = require('../models/User');
 const OvertimeRequest = require('../models/OvertimeRequest');
 
+// Normalize discipline codes into an upper-cased, de-duplicated array
+const normalizeDisciplineCodes = (codes, { required = false } = {}) => {
+  if (codes === undefined || codes === null) {
+    if (required) {
+      const err = new Error('Discipline code is required');
+      err.statusCode = 400;
+      throw err;
+    }
+    return undefined;
+  }
+
+  const normalized = (Array.isArray(codes) ? codes : [codes])
+    .map((c) => (c || '').toString().trim().toUpperCase())
+    .filter(Boolean);
+
+  const unique = Array.from(new Set(normalized));
+
+  if (required && unique.length === 0) {
+    const err = new Error('Discipline code is required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (unique.length > 8) {
+    const err = new Error('You can select up to 8 discipline codes per timesheet');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return unique;
+};
+
 // @desc    Get all timesheets
 // @route   GET /api/timesheets
 // @access  Private
@@ -65,7 +97,7 @@ exports.getAllTimesheets = async (req, res) => {
       timesheets
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 
@@ -93,7 +125,7 @@ exports.getTimesheet = async (req, res) => {
       timesheet
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 
@@ -113,7 +145,7 @@ exports.getTimesheetsByUser = async (req, res) => {
       timesheets
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 
@@ -133,7 +165,7 @@ exports.getTimesheetsByProject = async (req, res) => {
       timesheets
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 
@@ -142,30 +174,21 @@ exports.getTimesheetsByProject = async (req, res) => {
 // @access  Private
 exports.createTimesheet = async (req, res) => {
   try {
-    const { projectId, disciplineCode, area, month, year, entries } = req.body;
+    const { projectId, area, month, year, entries } = req.body;
     const userId = req.user.id;
 
-    // Check if timesheet already exists for this user/project/month/year.
-    // If a disciplineCode is provided, include it in the check so different
-    // disciplines can have separate timesheets for the same project/period.
-    let existingTimesheet;
-    if (disciplineCode && String(disciplineCode).trim() !== '') {
-      existingTimesheet = await Timesheet.findOne({
-        userId,
-        projectId,
-        disciplineCode: disciplineCode,
-        month,
-        year
-      });
-    } else {
-      // No discipline provided: fall back to the old uniqueness behaviour
-      existingTimesheet = await Timesheet.findOne({
-        userId,
-        projectId,
-        month,
-        year
-      });
-    }
+    const disciplineCodes = normalizeDisciplineCodes(
+      req.body.disciplineCodes !== undefined ? req.body.disciplineCodes : req.body.disciplineCode,
+      { required: true }
+    );
+
+    // Only one timesheet per user/project/month/year
+    const existingTimesheet = await Timesheet.findOne({
+      userId,
+      projectId,
+      month,
+      year
+    });
 
     if (existingTimesheet) {
       return res.status(400).json({ 
@@ -176,7 +199,7 @@ exports.createTimesheet = async (req, res) => {
     const timesheet = await Timesheet.create({
       userId,
       projectId,
-      disciplineCode,
+      disciplineCode: disciplineCodes,
       area,
       month,
       year,
@@ -215,7 +238,15 @@ exports.updateTimesheet = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update approved or submitted timesheet' });
     }
 
-    const { entries, disciplineCode, area, comments } = req.body;
+    const { entries, area, comments } = req.body;
+    const hasDisciplineField = Object.prototype.hasOwnProperty.call(req.body, 'disciplineCode') ||
+      Object.prototype.hasOwnProperty.call(req.body, 'disciplineCodes');
+    const updatedDisciplineCodes = hasDisciplineField
+      ? normalizeDisciplineCodes(
+          req.body.disciplineCodes !== undefined ? req.body.disciplineCodes : req.body.disciplineCode,
+          { required: true }
+        )
+      : undefined;
 
     // Validate OT hours against approved overtime requests
     if (entries && Array.isArray(entries)) {
@@ -250,7 +281,7 @@ exports.updateTimesheet = async (req, res) => {
     }
 
     if (entries) timesheet.entries = entries;
-    if (disciplineCode !== undefined) timesheet.disciplineCode = disciplineCode;
+    if (updatedDisciplineCodes !== undefined) timesheet.disciplineCode = updatedDisciplineCodes;
     if (area !== undefined) timesheet.area = area;
     if (comments) timesheet.comments = comments;
 

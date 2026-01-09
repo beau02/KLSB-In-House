@@ -45,7 +45,7 @@ export const TimesheetsPage = () => {
   const [overtimeRequests, setOvertimeRequests] = useState([]);
   const [formData, setFormData] = useState({
     projectId: '',
-    disciplineCode: '',
+    disciplineCodes: [],
     area: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -54,6 +54,7 @@ export const TimesheetsPage = () => {
 
   // Discipline codes
   const disciplineCodes = ['PMT', 'ADM', 'PRS', 'CIV', 'STR', 'PPG', 'ARC', 'MEC', 'ELE', 'INS', 'TEL', 'GEN', 'DCS'];
+  const MAX_DISCIPLINE_CODES = 8;
 
   // Activity descriptions
   const activityDescriptions = [
@@ -93,6 +94,11 @@ export const TimesheetsPage = () => {
   const areaOptions = formData.area && !projectAreaOptions.includes(formData.area)
     ? [...projectAreaOptions, formData.area]
     : projectAreaOptions;
+
+  const toDisciplineArray = (value) => {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
+  };
 
   useEffect(() => {
     loadData();
@@ -162,7 +168,7 @@ export const TimesheetsPage = () => {
       
       setFormData({
         projectId: timesheet.projectId._id,
-        disciplineCode: timesheet.disciplineCode || '',
+        disciplineCodes: toDisciplineArray(timesheet.disciplineCode),
         area: timesheet.area || '',
         month: timesheet.month,
         year: timesheet.year,
@@ -175,7 +181,7 @@ export const TimesheetsPage = () => {
       
       setFormData({
         projectId: '',
-        disciplineCode: '',
+        disciplineCodes: [],
         area: '',
         month: currentMonth,
         year: currentYear,
@@ -238,6 +244,13 @@ export const TimesheetsPage = () => {
     setFormData({ ...formData, entries: newEntries });
   };
 
+  const handleDisciplineChange = (event) => {
+    const value = event.target.value;
+    const codes = Array.isArray(value) ? value : [value];
+    if (codes.length > MAX_DISCIPLINE_CODES) return;
+    setFormData({ ...formData, disciplineCodes: codes });
+  };
+
   const handleSubmit = async () => {
     try {
       // Validate that OT hours have approved requests
@@ -258,7 +271,7 @@ export const TimesheetsPage = () => {
       const payload = {
         ...formData,
         area: formData.area,
-        disciplineCode: formData.disciplineCode
+        disciplineCodes: formData.disciplineCodes
       };
       
       if (selectedTimesheet) {
@@ -507,13 +520,21 @@ export const TimesheetsPage = () => {
               <FormControl fullWidth margin="normal" required>
                 <InputLabel>Discipline Code *</InputLabel>
                 <Select
-                  value={formData.disciplineCode}
+                  multiple
+                  value={formData.disciplineCodes}
                   label="Discipline Code *"
-                  onChange={(e) => setFormData({ ...formData, disciplineCode: e.target.value })}
+                  onChange={handleDisciplineChange}
                   disabled={isReadOnly(selectedTimesheet)}
+                  renderValue={(selected) => (selected || []).join(', ')}
                 >
                   {disciplineCodes.map((code) => (
-                    <MenuItem key={code} value={code}>{code}</MenuItem>
+                    <MenuItem
+                      key={code}
+                      value={code}
+                      disabled={!formData.disciplineCodes.includes(code) && formData.disciplineCodes.length >= MAX_DISCIPLINE_CODES}
+                    >
+                      {code}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -748,7 +769,7 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={isReadOnly(selectedTimesheet) || !formData.projectId || !formData.disciplineCode}
+            disabled={isReadOnly(selectedTimesheet) || !formData.projectId || formData.disciplineCodes.length === 0}
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

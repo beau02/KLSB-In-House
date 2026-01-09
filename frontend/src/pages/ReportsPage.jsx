@@ -130,13 +130,18 @@ export const ReportsPage = () => {
 
   const totals = calculateTotals();
 
+  const formatDisciplineCodes = (value) => {
+    const arr = Array.isArray(value) ? value : value ? [value] : [];
+    return arr.join(', ');
+  };
+
   // Build export rows with totals per employee
   const buildExportRows = () => {
     const rows = [];
     timesheets.forEach(t => {
       const rate = Number(t.userId?.hourlyRate || 0);
       const employee = `${t.userId?.firstName || ''} ${t.userId?.lastName || ''}`.trim();
-      const code = t.disciplineCode || '';
+      const code = formatDisciplineCodes(t.disciplineCode);
       const area = t.area || '';
       const normalHours = Number(t.totalNormalHours || 0);
       const otHours = Number(t.totalOTHours || 0);

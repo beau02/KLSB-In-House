@@ -408,7 +408,11 @@ export const ApprovalsPage = () => {
                     Discipline
                   </Typography>
                   <Typography variant="body1">
-                    {selectedTimesheet.disciplineCode || '-'}
+                    {(Array.isArray(selectedTimesheet.disciplineCode)
+                      ? selectedTimesheet.disciplineCode
+                      : selectedTimesheet.disciplineCode
+                        ? [selectedTimesheet.disciplineCode]
+                        : []).join(', ') || '-'}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={2}>

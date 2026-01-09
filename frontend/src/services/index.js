@@ -124,8 +124,8 @@ export const timesheetService = {
     return response.data;
   },
 
-  getByUser: async (userId) => {
-    const response = await api.get(`/timesheets/user/${userId}`);
+  getByUser: async (userId, params) => {
+    const response = await api.get(`/timesheets/user/${userId}`, { params });
     return response.data;
   },
 
