@@ -45,8 +45,8 @@ export const TimesheetsPage = () => {
   const [overtimeRequests, setOvertimeRequests] = useState([]);
   const [formData, setFormData] = useState({
     projectId: '',
-    disciplineCodes: [],
     area: '',
+    platform: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     entries: []
@@ -131,6 +131,7 @@ export const TimesheetsPage = () => {
     for (let day = 1; day <= daysInMonth; day++) {
       entries.push({
         date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        disciplineCodes: [],
         normalHours: 0,
         otHours: 0,
         hoursCode: '0',
@@ -158,6 +159,7 @@ export const TimesheetsPage = () => {
       
       const migratedEntries = (timesheet.entries || []).map(entry => ({
         date: entry.date,
+        disciplineCodes: toDisciplineArray(entry.disciplineCodes || entry.disciplineCode || timesheet.disciplineCode),
         normalHours: entry.normalHours !== undefined ? entry.normalHours : (entry.hours || 0),
         otHours: entry.otHours !== undefined ? entry.otHours : 0,
         hoursCode: entry.hoursCode !== undefined ? entry.hoursCode : 
@@ -168,8 +170,8 @@ export const TimesheetsPage = () => {
       
       setFormData({
         projectId: timesheet.projectId._id,
-        disciplineCodes: toDisciplineArray(timesheet.disciplineCode),
         area: timesheet.area || '',
+        platform: timesheet.platform || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
@@ -181,8 +183,8 @@ export const TimesheetsPage = () => {
       
       setFormData({
         projectId: '',
-        disciplineCodes: [],
         area: '',
+        platform: '',
         month: currentMonth,
         year: currentYear,
         entries: generateEmptyEntries(currentMonth, currentYear)
@@ -244,11 +246,12 @@ export const TimesheetsPage = () => {
     setFormData({ ...formData, entries: newEntries });
   };
 
-  const handleDisciplineChange = (event) => {
-    const value = event.target.value;
+  const handleEntryDisciplineChange = (index, value) => {
     const codes = Array.isArray(value) ? value : [value];
     if (codes.length > MAX_DISCIPLINE_CODES) return;
-    setFormData({ ...formData, disciplineCodes: codes });
+    const newEntries = [...formData.entries];
+    newEntries[index] = { ...newEntries[index], disciplineCodes: codes };
+    setFormData({ ...formData, entries: newEntries });
   };
 
   const handleSubmit = async () => {
@@ -271,7 +274,7 @@ export const TimesheetsPage = () => {
       const payload = {
         ...formData,
         area: formData.area,
-        disciplineCodes: formData.disciplineCodes
+        platform: formData.platform
       };
       
       if (selectedTimesheet) {
@@ -503,7 +506,13 @@ export const TimesheetsPage = () => {
                   label="Project *"
                   onChange={(e) => {
                     const projectId = e.target.value;
-                    setFormData({ ...formData, projectId, area: '' });
+                    const selectedProj = projects.find(p => p._id === projectId);
+                    setFormData({ 
+                      ...formData, 
+                      projectId, 
+                      area: '',
+                      platform: selectedProj?.platform || ''
+                    });
                   }}
                   disabled={!!selectedTimesheet}
                 >
@@ -518,30 +527,6 @@ export const TimesheetsPage = () => {
 
             <Grid item xs={12} sm={6} md={2.4}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Discipline Code *</InputLabel>
-                <Select
-                  multiple
-                  value={formData.disciplineCodes}
-                  label="Discipline Code *"
-                  onChange={handleDisciplineChange}
-                  disabled={isReadOnly(selectedTimesheet)}
-                  renderValue={(selected) => (selected || []).join(', ')}
-                >
-                  {disciplineCodes.map((code) => (
-                    <MenuItem
-                      key={code}
-                      value={code}
-                      disabled={!formData.disciplineCodes.includes(code) && formData.disciplineCodes.length >= MAX_DISCIPLINE_CODES}
-                    >
-                      {code}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <FormControl fullWidth margin="normal">
                 <InputLabel>Area</InputLabel>
                 <Select
                   value={formData.area}
@@ -557,8 +542,18 @@ export const TimesheetsPage = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
-              <FormControl fullWidth margin="normal" required>
+            <Grid item xs={12} sm={6} md={2.4}>              <TextField
+                fullWidth
+                label="Platform"
+                value={formData.platform}
+                onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                margin="normal"
+                disabled={isReadOnly(selectedTimesheet)}
+                placeholder="e.g. PDMS, E3D"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={2.4}>              <FormControl fullWidth margin="normal">
                 <InputLabel>Month *</InputLabel>
                 <Select
                   value={formData.month}
@@ -599,9 +594,10 @@ export const TimesheetsPage = () => {
                     <TableRow>
                       <TableCell width="60px"><strong>Date</strong></TableCell>
                       <TableCell width="60px"><strong>Day</strong></TableCell>
-                      <TableCell width="220px"><strong>Normal Hours</strong></TableCell>
+                      <TableCell width="200px"><strong>Discipline Code</strong></TableCell>
+                      <TableCell width="200px"><strong>Normal Hours</strong></TableCell>
                       <TableCell width="100px"><strong>OT Hours</strong></TableCell>
-                      <TableCell width="280px"><strong>Description</strong></TableCell>
+                      <TableCell width="260px"><strong>Description</strong></TableCell>
                       <TableCell><strong>Detailed Description</strong></TableCell>
                     </TableRow>
                   </TableHead>
@@ -617,6 +613,29 @@ export const TimesheetsPage = () => {
                             <Typography variant="body2" sx={{ color: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? '#fca5a5' : '#d32f2f') : 'inherit' }}>
                               {entryDate.format('ddd')}
                             </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <FormControl size="small" fullWidth>
+                              <Select
+                                multiple
+                                value={entry.disciplineCodes || []}
+                                onChange={(e) => handleEntryDisciplineChange(index, e.target.value)}
+                                disabled={isReadOnly(selectedTimesheet)}
+                                displayEmpty
+                                renderValue={(selected) => (selected && selected.length > 0 ? selected.join(', ') : 'Select code...')}
+                              >
+                                <MenuItem value=""><em>Select code...</em></MenuItem>
+                                {disciplineCodes.map((code) => (
+                                  <MenuItem
+                                    key={code}
+                                    value={code}
+                                    disabled={!(entry.disciplineCodes || []).includes(code) && (entry.disciplineCodes || []).length >= MAX_DISCIPLINE_CODES}
+                                  >
+                                    {code}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                           </TableCell>
                           <TableCell>
                             {entry.hoursCode === 'CUSTOM' ? (
@@ -769,7 +788,7 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={isReadOnly(selectedTimesheet) || !formData.projectId || formData.disciplineCodes.length === 0}
+            disabled={isReadOnly(selectedTimesheet) || !formData.projectId || formData.entries.some(e => !e.disciplineCodes || e.disciplineCodes.length === 0)}
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

@@ -10,7 +10,7 @@ exports.getProjectCosting = async (req, res) => {
   try {
     const { projectId } = req.params;
     // EXTRACT month/year from query
-    const { startDate, endDate, month, year, hourlyRate = 50 } = req.query; 
+    const { startDate, endDate, month, year, hourlyRate = 50, disciplineCode } = req.query; 
 
     console.log('[COSTING] getProjectCosting called with:', {
       projectId,
@@ -67,10 +67,20 @@ exports.getProjectCosting = async (req, res) => {
       .sort({ year: 1, month: 1 });
 
     const employeeCosts = {};
+    const disciplineCosts = {};
     let totalNormalHours = 0;
     let totalOTHours = 0;
     let totalHours = 0;
 
+    // Helper to extract discipline codes from entry
+    const getDisciplineCodes = (entry) => {
+      if (Array.isArray(entry.disciplineCodes) && entry.disciplineCodes.length > 0) {
+        return entry.disciplineCodes;
+      }
+      return [];
+    };
+
+    // Process timesheets and calculate costs
     timesheets.forEach(ts => {
       // Safety check for deleted users
       if (!ts.userId) return;
@@ -116,6 +126,53 @@ exports.getProjectCosting = async (req, res) => {
       totalNormalHours += normalHours;
       totalOTHours += otHours;
       totalHours += hours;
+
+      // Track discipline-based costs from entries
+      if (ts.entries && Array.isArray(ts.entries)) {
+        ts.entries.forEach(entry => {
+          const disciplines = getDisciplineCodes(entry);
+          const entryNormalHours = entry.normalHours || 0;
+          const entryOTHours = entry.otHours || 0;
+          const entryTotalHours = entryNormalHours + entryOTHours;
+
+          if (disciplines.length > 0 && entryTotalHours > 0) {
+            // Split hours equally across disciplines if multiple
+            const hoursPerDiscipline = entryTotalHours / disciplines.length;
+            const normalPerDiscipline = entryNormalHours / disciplines.length;
+            const otPerDiscipline = entryOTHours / disciplines.length;
+
+            disciplines.forEach(disc => {
+              // Filter if disciplineCode query param specified
+              if (disciplineCode && disc !== disciplineCode.toUpperCase()) {
+                return;
+              }
+
+              if (!disciplineCosts[disc]) {
+                disciplineCosts[disc] = {
+                  disciplineCode: disc,
+                  normalHours: 0,
+                  otHours: 0,
+                  totalHours: 0,
+                  normalCost: 0,
+                  otCost: 0,
+                  totalCost: 0,
+                  employeeCount: new Set(),
+                  entryCount: 0
+                };
+              }
+
+              disciplineCosts[disc].normalHours += normalPerDiscipline;
+              disciplineCosts[disc].otHours += otPerDiscipline;
+              disciplineCosts[disc].totalHours += hoursPerDiscipline;
+              disciplineCosts[disc].normalCost += normalPerDiscipline * effectiveHourly;
+              disciplineCosts[disc].otCost += otPerDiscipline * effectiveHourly;
+              disciplineCosts[disc].totalCost = disciplineCosts[disc].normalCost + disciplineCosts[disc].otCost;
+              disciplineCosts[disc].employeeCount.add(userId);
+              disciplineCosts[disc].entryCount += 1;
+            });
+          }
+        });
+      }
     });
 
     const totalNormalCost = Object.values(employeeCosts).reduce((s, e) => s + (e.normalCost || 0), 0);
@@ -163,6 +220,12 @@ exports.getProjectCosting = async (req, res) => {
       monthlyBreakdown[key].employeeCount = monthlyBreakdown[key].employeeCount.size;
     });
 
+    // Convert discipline costs Set to count
+    const disciplineBreakdown = Object.values(disciplineCosts).map(d => ({
+      ...d,
+      employeeCount: d.employeeCount.size
+    })).sort((a, b) => b.totalCost - a.totalCost);
+
     res.json({
       success: true,
       project: {
@@ -196,7 +259,8 @@ exports.getProjectCosting = async (req, res) => {
       monthlyBreakdown: Object.values(monthlyBreakdown).sort((a, b) => {
         if (a.year !== b.year) return a.year - b.year;
         return a.month - b.month;
-      })
+      }),
+      disciplineBreakdown: disciplineBreakdown
     });
   } catch (error) {
     console.error('Error in getProjectCosting:', error);

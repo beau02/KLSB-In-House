@@ -45,6 +45,7 @@ export const ProjectsPage = () => {
     endDate: '',
     company: '',
     contractor: '',
+    platform: '',
     status: 'active'
   });
 
@@ -74,6 +75,7 @@ export const ProjectsPage = () => {
         endDate: project.endDate ? moment(project.endDate).format('YYYY-MM-DD') : '',
         company: project.company || '',
         contractor: project.contractor || '',
+        platform: project.platform || '',
         status: project.status
       });
     } else {
@@ -86,6 +88,7 @@ export const ProjectsPage = () => {
         endDate: '',
         company: '',
         contractor: '',
+        platform: '',
         status: 'active'
       });
     }
@@ -210,6 +213,7 @@ export const ProjectsPage = () => {
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Project Name</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Company</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Contractor</TableCell>
+            <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Platform</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Areas</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Start Date</TableCell>
             <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>Status</TableCell>
@@ -219,7 +223,7 @@ export const ProjectsPage = () => {
           <TableBody>
             {projects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={9} align="center">
                   No projects found
                 </TableCell>
               </TableRow>
@@ -230,6 +234,7 @@ export const ProjectsPage = () => {
                   <TableCell>{project.projectName}</TableCell>
                   <TableCell>{project.company || '-'}</TableCell>
                   <TableCell>{project.contractor || '-'}</TableCell>
+                  <TableCell>{project.platform || '-'}</TableCell>
                   <TableCell>
                     {project.areas?.length ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -314,6 +319,14 @@ export const ProjectsPage = () => {
             value={formData.contractor}
             onChange={(e) => setFormData({ ...formData, contractor: e.target.value })}
             margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Platform"
+            value={formData.platform}
+            onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+            margin="normal"
+            placeholder="e.g. PDMS, E3D, SmartPlant, AutoCAD Plant 3D"
           />
           <TextField
             fullWidth

@@ -46,9 +46,13 @@ const ProjectCostingPage = () => {
   const [projectData, setProjectData] = useState(null);
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [filterDiscipline, setFilterDiscipline] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [avgMode, setAvgMode] = useState('hour'); // 'hour' | 'employee'
+
+  // Discipline codes
+  const disciplineCodes = ['PMT', 'ADM', 'PRS', 'CIV', 'STR', 'PPG', 'ARC', 'MEC', 'ELE', 'INS', 'TEL', 'GEN', 'DCS'];
 
   // Check if user has finance access (email contains 'arif' or is admin/manager)
   const isArif = (user?.email?.toLowerCase() === 'arif.r@kemuncaklanai.com');
@@ -80,13 +84,14 @@ const ProjectCostingPage = () => {
   };
 
   // Load detailed project data
-  const loadProjectData = async (projectId, month = '', year = '') => {
+  const loadProjectData = async (projectId, month = '', year = '', discipline = '') => {
     setIsLoading(true);
     setErrorMessage('');
     try {
       const params = new URLSearchParams();
       if (month) params.append('month', month);
       if (year) params.append('year', year);
+      if (discipline) params.append('disciplineCode', discipline);
       
       const url = `/costing/project/${projectId}${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await api.get(url);
@@ -95,7 +100,8 @@ const ProjectCostingPage = () => {
       const data = {
         summary: response.data?.summary || {},
         employeeBreakdown: Array.isArray(response.data?.employeeCosts) ? response.data.employeeCosts : [],
-        monthlyBreakdown: Array.isArray(response.data?.monthlyBreakdown) ? response.data.monthlyBreakdown : []
+        monthlyBreakdown: Array.isArray(response.data?.monthlyBreakdown) ? response.data.monthlyBreakdown : [],
+        disciplineBreakdown: Array.isArray(response.data?.disciplineBreakdown) ? response.data.disciplineBreakdown : []
       };
       setProjectData(data);
     } catch (err) {
@@ -111,7 +117,7 @@ const ProjectCostingPage = () => {
     setActiveProject(project);
     setViewMode('detail');
     const projectId = project.project?.id || project.id;
-    loadProjectData(projectId, filterMonth, filterYear);
+    loadProjectData(projectId, filterMonth, filterYear, filterDiscipline);
   };
 
   // Handle back to overview
@@ -121,13 +127,14 @@ const ProjectCostingPage = () => {
     setProjectData(null);
     setFilterMonth('');
     setFilterYear('');
+    setFilterDiscipline('');
   };
 
   // Handle filter change
   const applyFilters = () => {
     if (activeProject) {
       const projectId = activeProject.project?.id || activeProject.id;
-      loadProjectData(projectId, filterMonth, filterYear);
+      loadProjectData(projectId, filterMonth, filterYear, filterDiscipline);
     }
   };
 
@@ -307,10 +314,10 @@ const ProjectCostingPage = () => {
 
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Filter by Period
+            Filter by Period & Discipline
           </Typography>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <TextField
                 select
                 fullWidth
@@ -333,7 +340,7 @@ const ProjectCostingPage = () => {
                 <MenuItem value="12">December</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <TextField
                 select
                 fullWidth
@@ -347,7 +354,21 @@ const ProjectCostingPage = () => {
                 <MenuItem value="2026">2026</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                select
+                fullWidth
+                label="Discipline Code"
+                value={filterDiscipline}
+                onChange={(e) => setFilterDiscipline(e.target.value)}
+              >
+                <MenuItem value="">All Disciplines</MenuItem>
+                {disciplineCodes.map((code) => (
+                  <MenuItem key={code} value={code}>{code}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={3}>
               <Button
                 fullWidth
                 variant="contained"
@@ -537,6 +558,82 @@ const ProjectCostingPage = () => {
                 {(!projectData.employeeBreakdown || projectData.employeeBreakdown.length === 0) && (
                   <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
                     No employee data available for this period
+                  </Typography>
+                )}
+              </Paper>
+
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Assessment />
+                  Discipline Cost Breakdown
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Discipline Code</strong></TableCell>
+                        <TableCell align="right"><strong>Normal Hours</strong></TableCell>
+                        <TableCell align="right"><strong>OT Hours</strong></TableCell>
+                        <TableCell align="right"><strong>Total Hours</strong></TableCell>
+                        <TableCell align="right"><strong>Employees</strong></TableCell>
+                        <TableCell align="right"><strong>Total Cost</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Array.isArray(projectData.disciplineBreakdown) && projectData.disciplineBreakdown.map((disc, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>
+                            <Chip
+                              label={disc.disciplineCode}
+                              size="small"
+                              color="primary"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(disc.normalHours)}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(disc.otHours)}
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={formatHours(disc.totalHours)}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={disc.employeeCount}
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight="bold" color="success.main">
+                              {formatCurrencyMasked(disc.totalCost)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                {(!projectData.disciplineBreakdown || projectData.disciplineBreakdown.length === 0) && (
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                    No discipline data available for this period
                   </Typography>
                 )}
               </Paper>

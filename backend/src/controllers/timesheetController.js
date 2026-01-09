@@ -34,6 +34,20 @@ const normalizeDisciplineCodes = (codes, { required = false } = {}) => {
   return unique;
 };
 
+const normalizeEntriesWithDiscipline = (entries = []) => {
+  return entries.map((entry) => {
+    const codes = normalizeDisciplineCodes(
+      entry.disciplineCodes !== undefined ? entry.disciplineCodes : entry.disciplineCode,
+      { required: true }
+    );
+
+    return {
+      ...entry,
+      disciplineCodes: codes
+    };
+  });
+};
+
 // @desc    Get all timesheets
 // @route   GET /api/timesheets
 // @access  Private
@@ -174,13 +188,10 @@ exports.getTimesheetsByProject = async (req, res) => {
 // @access  Private
 exports.createTimesheet = async (req, res) => {
   try {
-    const { projectId, area, month, year, entries } = req.body;
+    const { projectId, area, month, year } = req.body;
     const userId = req.user.id;
 
-    const disciplineCodes = normalizeDisciplineCodes(
-      req.body.disciplineCodes !== undefined ? req.body.disciplineCodes : req.body.disciplineCode,
-      { required: true }
-    );
+    const normalizedEntries = normalizeEntriesWithDiscipline(req.body.entries || []);
 
     // Only one timesheet per user/project/month/year
     const existingTimesheet = await Timesheet.findOne({
@@ -199,11 +210,10 @@ exports.createTimesheet = async (req, res) => {
     const timesheet = await Timesheet.create({
       userId,
       projectId,
-      disciplineCode: disciplineCodes,
       area,
       month,
       year,
-      entries
+      entries: normalizedEntries
     });
 
     await timesheet.populate('projectId', 'projectCode projectName');
@@ -239,14 +249,7 @@ exports.updateTimesheet = async (req, res) => {
     }
 
     const { entries, area, comments } = req.body;
-    const hasDisciplineField = Object.prototype.hasOwnProperty.call(req.body, 'disciplineCode') ||
-      Object.prototype.hasOwnProperty.call(req.body, 'disciplineCodes');
-    const updatedDisciplineCodes = hasDisciplineField
-      ? normalizeDisciplineCodes(
-          req.body.disciplineCodes !== undefined ? req.body.disciplineCodes : req.body.disciplineCode,
-          { required: true }
-        )
-      : undefined;
+    const normalizedEntries = entries ? normalizeEntriesWithDiscipline(entries) : undefined;
 
     // Validate OT hours against approved overtime requests
     if (entries && Array.isArray(entries)) {
@@ -280,8 +283,7 @@ exports.updateTimesheet = async (req, res) => {
       }
     }
 
-    if (entries) timesheet.entries = entries;
-    if (updatedDisciplineCodes !== undefined) timesheet.disciplineCode = updatedDisciplineCodes;
+    if (normalizedEntries) timesheet.entries = normalizedEntries;
     if (area !== undefined) timesheet.area = area;
     if (comments) timesheet.comments = comments;
 

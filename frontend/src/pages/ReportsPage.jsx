@@ -130,9 +130,12 @@ export const ReportsPage = () => {
 
   const totals = calculateTotals();
 
-  const formatDisciplineCodes = (value) => {
-    const arr = Array.isArray(value) ? value : value ? [value] : [];
-    return arr.join(', ');
+  const formatDisciplineCodes = (timesheet) => {
+    const codes = new Set();
+    (timesheet.entries || []).forEach((e) => {
+      (Array.isArray(e.disciplineCodes) ? e.disciplineCodes : e.disciplineCodes ? [e.disciplineCodes] : []).forEach((c) => codes.add(c));
+    });
+    return Array.from(codes).join(', ');
   };
 
   // Build export rows with totals per employee
@@ -141,7 +144,7 @@ export const ReportsPage = () => {
     timesheets.forEach(t => {
       const rate = Number(t.userId?.hourlyRate || 0);
       const employee = `${t.userId?.firstName || ''} ${t.userId?.lastName || ''}`.trim();
-      const code = formatDisciplineCodes(t.disciplineCode);
+      const code = formatDisciplineCodes(t);
       const area = t.area || '';
       const normalHours = Number(t.totalNormalHours || 0);
       const otHours = Number(t.totalOTHours || 0);

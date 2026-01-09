@@ -38,6 +38,10 @@ const projectSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  platform: {
+    type: String,
+    trim: true
+  },
   areas: {
     type: [{
       type: String,

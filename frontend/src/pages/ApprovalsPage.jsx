@@ -408,11 +408,15 @@ export const ApprovalsPage = () => {
                     Discipline
                   </Typography>
                   <Typography variant="body1">
-                    {(Array.isArray(selectedTimesheet.disciplineCode)
-                      ? selectedTimesheet.disciplineCode
-                      : selectedTimesheet.disciplineCode
-                        ? [selectedTimesheet.disciplineCode]
-                        : []).join(', ') || '-'}
+                    {(() => {
+                      const entries = selectedTimesheet.entries || [];
+                      const codes = new Set();
+                      entries.forEach((e) => {
+                        (Array.isArray(e.disciplineCodes) ? e.disciplineCodes : e.disciplineCodes ? [e.disciplineCodes] : []).forEach((c) => codes.add(c));
+                      });
+                      const list = Array.from(codes);
+                      return list.length ? list.join(', ') : '-';
+                    })()}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={2}>
@@ -452,9 +456,10 @@ export const ApprovalsPage = () => {
                         <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0f172a' : undefined }}>
                           <TableCell width="60px"><strong>Date</strong></TableCell>
                           <TableCell width="60px"><strong>Day</strong></TableCell>
+                          <TableCell width="160px"><strong>Discipline Code</strong></TableCell>
                           <TableCell width="100px"><strong>Normal Hours</strong></TableCell>
                           <TableCell width="100px"><strong>OT Hours</strong></TableCell>
-                          <TableCell width="280px"><strong>Description</strong></TableCell>
+                          <TableCell width="260px"><strong>Description</strong></TableCell>
                           <TableCell><strong>Detailed Description</strong></TableCell>
                         </TableRow>
                       </TableHead>
@@ -476,6 +481,9 @@ export const ApprovalsPage = () => {
                                 >
                                   {entryDate.format('ddd')}
                                 </Typography>
+                              </TableCell>
+                              <TableCell>
+                                {(Array.isArray(entry.disciplineCodes) ? entry.disciplineCodes : entry.disciplineCodes ? [entry.disciplineCodes] : []).join(', ') || '-'}
                               </TableCell>
                               <TableCell>{entry.normalHours || 0}</TableCell>
                               <TableCell>{entry.otHours || 0}</TableCell>
