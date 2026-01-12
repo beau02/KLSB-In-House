@@ -1,4 +1,4 @@
-import api from './api';
+import api, { cachedGet, clearCacheEntry, clearApiCache } from './api';
 
 export const authService = {
   login: async (email, password, captchaToken = null) => {
@@ -44,8 +44,9 @@ export const authService = {
 
 export const userService = {
   getAll: async (params) => {
-    const response = await api.get('/users', { params });
-    return response.data;
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    const { data } = await cachedGet(`/users${queryString}`, { ttl: 300 });
+    return data;
   },
 
   getById: async (id) => {
@@ -76,81 +77,96 @@ export const userService = {
 
 export const departmentService = {
   getAll: async () => {
-    const response = await api.get('/departments');
-    return response.data;
+    const { data } = await cachedGet('/departments', { ttl: 600 });
+    return data;
   }
 };
 
 export const projectService = {
   getAll: async (params) => {
-    const response = await api.get('/projects', { params });
-    return response.data;
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    const { data } = await cachedGet(`/projects${queryString}`, { ttl: 300 });
+    return data;
   },
 
   getById: async (id) => {
-    const response = await api.get(`/projects/${id}`);
-    return response.data;
+    const { data } = await cachedGet(`/projects/${id}`, { ttl: 300 });
+    return data;
   },
 
   create: async (projectData) => {
     const response = await api.post('/projects', projectData);
+    clearCacheEntry('/projects');
     return response.data;
   },
 
   update: async (id, projectData) => {
     const response = await api.put(`/projects/${id}`, projectData);
+    clearCacheEntry('/projects');
+    clearCacheEntry(`/projects/${id}`);
     return response.data;
   },
 
   addArea: async (id, area) => {
     const response = await api.post(`/projects/${id}/areas`, { area });
+    clearCacheEntry(`/projects/${id}`);
     return response.data;
   },
 
   addPlatform: async (id, platform) => {
     const response = await api.post(`/projects/${id}/platforms`, { platform });
+    clearCacheEntry(`/projects/${id}`);
     return response.data;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/projects/${id}`);
+    clearCacheEntry('/projects');
+    clearCacheEntry(`/projects/${id}`);
     return response.data;
   }
 };
 
 export const timesheetService = {
   getAll: async (params) => {
-    const response = await api.get('/timesheets', { params });
-    return response.data;
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    const { data } = await cachedGet(`/timesheets${queryString}`, { ttl: 180 });
+    return data;
   },
 
   getById: async (id) => {
-    const response = await api.get(`/timesheets/${id}`);
-    return response.data;
+    const { data } = await cachedGet(`/timesheets/${id}`, { ttl: 180 });
+    return data;
   },
 
   getByUser: async (userId, params) => {
-    const response = await api.get(`/timesheets/user/${userId}`, { params });
-    return response.data;
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    const { data } = await cachedGet(`/timesheets/user/${userId}${queryString}`, { ttl: 180 });
+    return data;
   },
 
   getByProject: async (projectId) => {
-    const response = await api.get(`/timesheets/project/${projectId}`);
-    return response.data;
+    const { data } = await cachedGet(`/timesheets/project/${projectId}`, { ttl: 180 });
+    return data;
   },
 
   create: async (timesheetData) => {
     const response = await api.post('/timesheets', timesheetData);
+    clearCacheEntry('/timesheets');
     return response.data;
   },
 
   update: async (id, timesheetData) => {
     const response = await api.put(`/timesheets/${id}`, timesheetData);
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   submit: async (id) => {
     const response = await api.patch(`/timesheets/${id}/submit`);
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
@@ -159,16 +175,22 @@ export const timesheetService = {
       throw new Error('Invalid timesheet id');
     }
     const response = await api.patch(`/timesheets/${id}/approve`, { comments });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   reject: async (id, rejectionReason, comments = '') => {
     const response = await api.patch(`/timesheets/${id}/reject`, { rejectionReason, comments });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/timesheets/${id}`);
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   }
 };

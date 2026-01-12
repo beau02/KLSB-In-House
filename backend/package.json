@@ -25,13 +25,15 @@
     "express-rate-limit": "^7.0.0",
     "express-validator": "^7.0.1",
     "helmet": "^7.0.0",
+    "ioredis": "^5.9.1",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.29.4",
     "mongodb": "^6.5.0",
     "mongoose": "^6.11.5",
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.10",
-    "react-google-recaptcha": "^3.1.0"
+    "react-google-recaptcha": "^3.1.0",
+    "redis": "^5.10.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
