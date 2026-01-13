@@ -185,27 +185,59 @@ export const TimesheetsPage = () => {
       
       setFormData(newFormData);
       
-      // Check for conflicts
+      // Check for conflicts on ALL dates, not just filled ones
       try {
-        const result = await timesheetService.checkConflicts(
-          timesheet.month,
-          timesheet.year,
-          newFormData.entries,
-          timesheet._id
-        );
+        // First, get all other timesheets for this month to check for conflicts
+        const allTimesheets = await timesheetService.getByUser(user._id || user.id, { 
+          month: timesheet.month, 
+          year: timesheet.year 
+        });
         
-        if (result.hasConflicts) {
-          const conflictMap = {};
-          result.conflictingDates.forEach(conflict => {
-            conflictMap[conflict.date] = conflict;
-          });
-          setConflictingDates(conflictMap);
-        } else {
-          setConflictingDates([]);
+        // Filter out the current timesheet
+        const otherTimesheets = (allTimesheets.timesheets || []).filter(ts => ts._id !== timesheet._id);
+        
+        const conflictMap = {};
+        
+        // Check each date in the month against other timesheets
+        for (const entry of newFormData.entries) {
+          const entryDate = new Date(entry.date);
+          const day = entryDate.getDate();
+          
+          // Check if any other timesheet has hours on this date
+          let totalHoursOnDate = 0;
+          
+          for (const otherTs of otherTimesheets) {
+            const matchingEntries = (otherTs.entries || []).filter(e => {
+              const eDate = new Date(e.date);
+              return eDate.getDate() === day && 
+                     eDate.getMonth() === entryDate.getMonth() &&
+                     eDate.getFullYear() === entryDate.getFullYear();
+            });
+            
+            for (const matchEntry of matchingEntries) {
+              totalHoursOnDate += matchEntry.normalHours || 0;
+            }
+          }
+          
+          // If other timesheets already have >= 8 hours, lock this date
+          if (totalHoursOnDate >= 8) {
+            conflictMap[day] = {
+              date: day,
+              existingHours: totalHoursOnDate,
+              isLocked: true
+            };
+          }
         }
+        
+        console.log('=== CONFLICT CHECK (ALL DATES) ===');
+        console.log('Other timesheets count:', otherTimesheets.length);
+        console.log('Conflict map:', conflictMap);
+        console.log('===================================');
+        
+        setConflictingDates(conflictMap);
       } catch (error) {
         console.error('Error checking conflicts:', error);
-        setConflictingDates([]);
+        setConflictingDates({});
       }
     } else {
       setSelectedTimesheet(null);
@@ -734,27 +766,36 @@ export const TimesheetsPage = () => {
                     {formData.entries.map((entry, index) => {
                       const entryDate = moment(entry.date);
                       const isWeekend = entryDate.day() === 0 || entryDate.day() === 6;
-                      const dayOfMonth = entryDate.getDate();
+                      const dayOfMonth = entryDate.date();
                       const hasConflict = conflictingDates[dayOfMonth];
-                      const isConflictedDate = hasConflict && entry.normalHours > 0;
+                      const isConflictedDate = !!hasConflict; // Lock if OTHER timesheets have 8+ hours on this date
                       
                       return (
                         <Tooltip 
-                          title={isConflictedDate ? `This date already has ${hasConflict.existingHours} hrs assigned in another timesheet. Cannot add more hours.` : ''}
+                          title={isConflictedDate ? `Daily limit exceeded! This date already has ${hasConflict.existingHours} hrs assigned in another timesheet. Cannot add more hours (max 8 hrs/day).` : ''}
                           arrow
                         >
                           <TableRow 
                             key={index} 
                             sx={{ 
                               bgcolor: isConflictedDate 
-                                ? (theme) => theme.palette.mode === 'dark' ? 'rgba(200, 200, 200, 0.15)' : '#e8e8e8'
+                                ? (theme) => theme.palette.mode === 'dark' ? 'rgba(120, 120, 120, 0.6)' : '#c0c0c0'
                                 : isWeekend ? (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#f5f5f5' 
                                 : 'inherit',
-                              opacity: isConflictedDate ? 0.6 : 1,
-                              pointerEvents: isConflictedDate ? 'none' : 'auto'
+                              opacity: isConflictedDate ? 0.45 : 1,
+                              pointerEvents: isConflictedDate ? 'none' : 'auto',
+                              cursor: isConflictedDate ? 'not-allowed' : 'auto',
+                              border: isConflictedDate ? (theme) => `2px solid ${theme.palette.mode === 'dark' ? '#888' : '#888'}` : 'none'
                             }}
                           >
-                            <TableCell sx={{ opacity: isConflictedDate ? 0.7 : 1 }}>{entryDate.format('DD')}</TableCell>
+                            <TableCell sx={{ opacity: isConflictedDate ? 0.7 : 1, position: 'relative' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {entryDate.format('DD')}
+                                {isConflictedDate && (
+                                  <Block sx={{ fontSize: 18, color: '#666' }} title="Daily limit exceeded (8hrs max)" />
+                                )}
+                              </Box>
+                            </TableCell>
                             <TableCell>
                               <Typography 
                                 variant="body2" 

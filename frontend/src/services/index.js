@@ -152,37 +152,21 @@ export const timesheetService = {
 
   create: async (timesheetData) => {
     const response = await api.post('/timesheets', timesheetData);
-    // Clear all timesheet-related cache entries
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
     return response.data;
   },
 
   update: async (id, timesheetData) => {
     const response = await api.put(`/timesheets/${id}`, timesheetData);
-    // Clear all timesheet-related cache entries
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   submit: async (id) => {
     const response = await api.patch(`/timesheets/${id}/submit`);
-    // Clear all timesheet-related cache entries
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
@@ -191,37 +175,22 @@ export const timesheetService = {
       throw new Error('Invalid timesheet id');
     }
     const response = await api.patch(`/timesheets/${id}/approve`, { comments });
-    // Clear all timesheet-related cache entries
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   reject: async (id, rejectionReason, comments = '') => {
     const response = await api.patch(`/timesheets/${id}/reject`, { rejectionReason, comments });
-    // Clear all timesheet-related cache entries
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/timesheets/${id}`);
-    // Clear all timesheet-related cache entries including user-specific ones with query params
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('api_/timesheets')) {
-        localStorage.removeItem(key);
-      }
-    });
+    clearCacheEntry('/timesheets');
+    clearCacheEntry(`/timesheets/${id}`);
     return response.data;
   },
 
