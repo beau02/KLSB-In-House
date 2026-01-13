@@ -47,7 +47,7 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     // Check if patch notes have been shown for this version
-    const patchVersion = 'v2.1.0';
+    const patchVersion = 'v2.2.0';
     const shownPatchKey = `patchNoteShown_${patchVersion}`;
     const hasShownPatch = localStorage.getItem(shownPatchKey);
     
@@ -375,7 +375,7 @@ export const DashboardPage = () => {
           color: '#16a34a'
         }}>
           <NewReleases />
-          What's New in v2.1.0
+          What's New in v2.2.0
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.mode === 'dark' ? '#e5e7eb' : '#374151' }}>
@@ -387,10 +387,34 @@ export const DashboardPage = () => {
               <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Multi-Timesheet Hour Validation
+                  🔒 Multi-Timesheet Daily Hour Limit
                 </Typography>
                 <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  When you have multiple timesheets in the same month, you can no longer exceed 8 hours per day across all projects. Dates that would exceed this limit are automatically grayed out to prevent conflicts.
+                  When you have multiple timesheets in the same month, the system now prevents exceeding 8 hours per day across all projects. Dates that already have 8+ hours from other timesheets are automatically locked and grayed out with a lock icon.
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  🗑️ Fixed Timesheet Deletion
+                </Typography>
+                <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
+                  Deleting rejected timesheets now properly removes them from your list immediately. Previously deleted timesheets would reappear after refresh.
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  ✏️ Improved Edit Dialog
+                </Typography>
+                <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
+                  Opening your draft timesheet now works instantly without delays. The dialog opens immediately, and data loads in the background for a smoother experience.
                 </Typography>
               </Box>
             </Box>
@@ -398,11 +422,11 @@ export const DashboardPage = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Detailed Conflict Warnings
+                <Typography variant="subtitle2" sx={{ fontWeight: 707, mb: 0.5 }}>
+                  ⚠️ Conflict Prevention Dialog
                 </Typography>
                 <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  If you try to exceed 8 hours on a day, a detailed warning dialog now shows you exactly which projects have hours already assigned, helping you manage your time better.
+                  If you try to exceed 8 hours on a day, a detailed warning shows you exactly which projects have hours assigned and how much. This helps you manage your time across multiple timesheets.
                 </Typography>
               </Box>
             </Box>
@@ -415,10 +439,10 @@ export const DashboardPage = () => {
             border: '1px solid #c7d2fe'
           }}>
             <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: '#4f46e5' }}>
-              💡 TIP
+              💡 HOW IT WORKS
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '0.875rem', color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#4b5563' }}>
-              Use the grayed-out dates as a guide - they indicate dates where adding more hours would exceed the 8-hour daily limit. Hover over these dates for more details.
+              When editing a timesheet, dates with 8+ hours already assigned in other timesheets will appear grayed out with a lock icon. Hover over them to see which projects have hours on that date. You cannot add hours to locked dates - reduce hours in the other timesheet first.
             </Typography>
           </Box>
         </DialogContent>

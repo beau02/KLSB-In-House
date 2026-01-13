@@ -44,9 +44,10 @@ export const authService = {
 
 export const userService = {
   getAll: async (params) => {
+    // Staff data should always be fresh; skip cache to avoid stale lists after edits
     const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-    const { data } = await cachedGet(`/users${queryString}`, { ttl: 300 });
-    return data;
+    const response = await api.get(`/users${queryString}`);
+    return response.data;
   },
 
   getById: async (id) => {
@@ -56,21 +57,29 @@ export const userService = {
 
   create: async (userData) => {
     const response = await api.post('/users', userData);
+    clearCacheEntry('/users');
+    clearCacheEntry(`/users/${response.data?.user?._id || ''}`);
     return response.data;
   },
 
   update: async (id, userData) => {
     const response = await api.put(`/users/${id}`, userData);
+    clearCacheEntry('/users');
+    clearCacheEntry(`/users/${id}`);
     return response.data;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/users/${id}`);
+    clearCacheEntry('/users');
+    clearCacheEntry(`/users/${id}`);
     return response.data;
   },
 
   permanentDelete: async (id) => {
     const response = await api.delete(`/users/${id}/permanent`);
+    clearCacheEntry('/users');
+    clearCacheEntry(`/users/${id}`);
     return response.data;
   }
 };
