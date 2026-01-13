@@ -152,21 +152,37 @@ export const timesheetService = {
 
   create: async (timesheetData) => {
     const response = await api.post('/timesheets', timesheetData);
-    clearCacheEntry('/timesheets');
+    // Clear all timesheet-related cache entries
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
     return response.data;
   },
 
   update: async (id, timesheetData) => {
     const response = await api.put(`/timesheets/${id}`, timesheetData);
-    clearCacheEntry('/timesheets');
-    clearCacheEntry(`/timesheets/${id}`);
+    // Clear all timesheet-related cache entries
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
     return response.data;
   },
 
   submit: async (id) => {
     const response = await api.patch(`/timesheets/${id}/submit`);
-    clearCacheEntry('/timesheets');
-    clearCacheEntry(`/timesheets/${id}`);
+    // Clear all timesheet-related cache entries
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
     return response.data;
   },
 
@@ -175,22 +191,57 @@ export const timesheetService = {
       throw new Error('Invalid timesheet id');
     }
     const response = await api.patch(`/timesheets/${id}/approve`, { comments });
-    clearCacheEntry('/timesheets');
-    clearCacheEntry(`/timesheets/${id}`);
+    // Clear all timesheet-related cache entries
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
     return response.data;
   },
 
   reject: async (id, rejectionReason, comments = '') => {
     const response = await api.patch(`/timesheets/${id}/reject`, { rejectionReason, comments });
-    clearCacheEntry('/timesheets');
-    clearCacheEntry(`/timesheets/${id}`);
+    // Clear all timesheet-related cache entries
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
     return response.data;
   },
 
   delete: async (id) => {
     const response = await api.delete(`/timesheets/${id}`);
-    clearCacheEntry('/timesheets');
-    clearCacheEntry(`/timesheets/${id}`);
+    // Clear all timesheet-related cache entries including user-specific ones with query params
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('api_/timesheets')) {
+        localStorage.removeItem(key);
+      }
+    });
+    return response.data;
+  },
+
+  checkConflicts: async (month, year, entries, timesheetId = null) => {
+    const response = await api.post('/timesheets/check-conflicts', {
+      month,
+      year,
+      entries,
+      timesheetId
+    });
+    return response.data;
+  },
+
+  getConflictDetails: async (month, year, date, timesheetId = null) => {
+    const response = await api.post('/timesheets/conflicts-details', {
+      month,
+      year,
+      date,
+      timesheetId
+    });
     return response.data;
   }
 };

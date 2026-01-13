@@ -2,6 +2,51 @@ const Timesheet = require('../models/Timesheet');
 const User = require('../models/User');
 const OvertimeRequest = require('../models/OvertimeRequest');
 
+// @desc Check if a date has conflicting hours across multiple timesheets
+// Check if a date already has >= 8 normal hours in another timesheet
+const checkDateConflict = async (userId, month, year, date, excludeTimesheetId = null) => {
+  const startOfDay = new Date(year, month - 1, date);
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date(year, month - 1, date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const query = {
+    userId,
+    month,
+    year,
+    'entries.date': {
+      $gte: startOfDay,
+      $lte: endOfDay
+    }
+  };
+
+  if (excludeTimesheetId) {
+    query._id = { $ne: excludeTimesheetId };
+  }
+
+  const existingTimesheets = await Timesheet.find(query);
+  
+  let totalNormalHours = 0;
+  for (const ts of existingTimesheets) {
+    const matchingEntries = ts.entries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate.getDate() === date && 
+             entryDate.getMonth() === month - 1 && 
+             entryDate.getFullYear() === year;
+    });
+    
+    for (const entry of matchingEntries) {
+      totalNormalHours += entry.normalHours || 0;
+    }
+  }
+
+  return {
+    hasConflict: totalNormalHours >= 8,
+    totalHours: totalNormalHours
+  };
+};
+
 // Normalize discipline codes into an upper-cased, de-duplicated array
 const normalizeDisciplineCodes = (codes, { required = false } = {}) => {
   if (codes === undefined || codes === null) {
@@ -220,6 +265,31 @@ exports.createTimesheet = async (req, res) => {
       });
     }
 
+    // Check for date conflicts - if a date already has >= 8 normal hours in another timesheet
+    const conflictingDates = [];
+    for (const entry of normalizedEntries) {
+      const entryDate = new Date(entry.date);
+      const day = entryDate.getDate();
+      
+      if (entry.normalHours > 0) {
+        const conflict = await checkDateConflict(userId, month, year, day);
+        if (conflict.hasConflict) {
+          conflictingDates.push({
+            date: day,
+            existingHours: conflict.totalHours,
+            newHours: entry.normalHours
+          });
+        }
+      }
+    }
+
+    if (conflictingDates.length > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot create timesheet. Some dates already have >= 8 normal hours assigned in other timesheets for this month.',
+        conflictingDates
+      });
+    }
+
     const timesheet = await Timesheet.create({
       userId,
       projectId,
@@ -272,6 +342,33 @@ exports.updateTimesheet = async (req, res) => {
 
     const { entries, area, comments } = req.body;
     const normalizedEntries = entries ? normalizeEntriesWithDiscipline(entries) : undefined;
+
+    // Validate date conflicts - check if updated entries would conflict with other timesheets
+    if (normalizedEntries && Array.isArray(normalizedEntries)) {
+      const conflictingDates = [];
+      for (const entry of normalizedEntries) {
+        const entryDate = new Date(entry.date);
+        const day = entryDate.getDate();
+        
+        if (entry.normalHours > 0) {
+          const conflict = await checkDateConflict(timesheet.userId, timesheet.month, timesheet.year, day, timesheet._id);
+          if (conflict.hasConflict) {
+            conflictingDates.push({
+              date: day,
+              existingHours: conflict.totalHours,
+              newHours: entry.normalHours
+            });
+          }
+        }
+      }
+
+      if (conflictingDates.length > 0) {
+        return res.status(400).json({ 
+          message: 'Cannot update timesheet. Some dates already have >= 8 normal hours assigned in other timesheets for this month.',
+          conflictingDates
+        });
+      }
+    }
 
     // Validate OT hours against approved overtime requests
     if (entries && Array.isArray(entries)) {
@@ -469,6 +566,123 @@ exports.deleteTimesheet = async (req, res) => {
     res.json({
       success: true,
       message: 'Timesheet deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// @desc    Check for date conflicts with existing timesheets
+// @route   POST /api/timesheets/check-conflicts
+// @access  Private
+exports.checkDateConflicts = async (req, res) => {
+  try {
+    const { month, year, entries, timesheetId } = req.body;
+    const userId = req.user.id;
+
+    if (!month || !year || !entries || !Array.isArray(entries)) {
+      return res.status(400).json({ 
+        message: 'month, year, and entries array are required' 
+      });
+    }
+
+    const conflictingDates = [];
+    
+    for (const entry of entries) {
+      if (!entry.date) continue;
+      
+      const entryDate = new Date(entry.date);
+      const day = entryDate.getDate();
+      
+      if (entry.normalHours > 0) {
+        const conflict = await checkDateConflict(userId, month, year, day, timesheetId || null);
+        if (conflict.hasConflict) {
+          conflictingDates.push({
+            date: day,
+            existingHours: conflict.totalHours,
+            newHours: entry.normalHours,
+            totalHours: conflict.totalHours + entry.normalHours
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      hasConflicts: conflictingDates.length > 0,
+      conflictingDates
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get detailed conflict information for a specific date
+// @route   POST /api/timesheets/conflicts-details
+// @access  Private
+exports.getConflictDetails = async (req, res) => {
+  try {
+    const { month, year, date, timesheetId } = req.body;
+    const userId = req.user.id;
+
+    if (!month || !year || !date) {
+      return res.status(400).json({ 
+        message: 'month, year, and date are required' 
+      });
+    }
+
+    const startOfDay = new Date(year, month - 1, date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(year, month - 1, date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const query = {
+      userId,
+      month,
+      year,
+      'entries.date': {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    };
+
+    if (timesheetId) {
+      query._id = { $ne: timesheetId };
+    }
+
+    const existingTimesheets = await Timesheet.find(query)
+      .populate('projectId', 'projectCode projectName')
+      .select('projectId entries');
+    
+    const conflictDetails = [];
+    let totalHours = 0;
+
+    for (const ts of existingTimesheets) {
+      const matchingEntries = ts.entries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate.getDate() === date && 
+               entryDate.getMonth() === month - 1 && 
+               entryDate.getFullYear() === year;
+      });
+      
+      for (const entry of matchingEntries) {
+        if (entry.normalHours > 0) {
+          totalHours += entry.normalHours;
+          conflictDetails.push({
+            projectCode: ts.projectId?.projectCode || 'Unknown',
+            projectName: ts.projectId?.projectName || 'Unknown',
+            normalHours: entry.normalHours,
+            date: date
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      date,
+      totalExistingHours: totalHours,
+      conflictDetails
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

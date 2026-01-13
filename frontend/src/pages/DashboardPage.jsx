@@ -9,7 +9,12 @@ import {
   CardContent,
   CircularProgress,
   alpha,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
 } from '@mui/material';
 import {
   Assignment,
@@ -18,13 +23,16 @@ import {
   Work,
   Cancel,
   TrendingUp,
-  People
+  People,
+  NewReleases,
+  CheckCircleOutline
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { timesheetService, projectService, statsService } from '../services';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const [patchNoteDialogOpen, setPatchNoteDialogOpen] = useState(false);
   const [stats, setStats] = useState({
     totalTimesheets: 0,
     pendingTimesheets: 0,
@@ -38,8 +46,22 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if patch notes have been shown for this version
+    const patchVersion = 'v2.1.0';
+    const shownPatchKey = `patchNoteShown_${patchVersion}`;
+    const hasShownPatch = localStorage.getItem(shownPatchKey);
+    
+    if (!hasShownPatch) {
+      setPatchNoteDialogOpen(true);
+      localStorage.setItem(shownPatchKey, 'true');
+    }
+    
     loadDashboardData();
   }, []);
+
+  const handleClosePatchNote = () => {
+    setPatchNoteDialogOpen(false);
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -341,6 +363,80 @@ export const DashboardPage = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      <Dialog open={patchNoteDialogOpen} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ 
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.15)' : '#f0fdf4',
+          borderBottom: '2px solid #22c55e',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          fontWeight: 700,
+          color: '#16a34a'
+        }}>
+          <NewReleases />
+          What's New in v2.1.0
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.mode === 'dark' ? '#e5e7eb' : '#374151' }}>
+            ✨ New Features & Improvements
+          </Typography>
+
+          <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  Multi-Timesheet Hour Validation
+                </Typography>
+                <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
+                  When you have multiple timesheets in the same month, you can no longer exceed 8 hours per day across all projects. Dates that would exceed this limit are automatically grayed out to prevent conflicts.
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  Detailed Conflict Warnings
+                </Typography>
+                <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
+                  If you try to exceed 8 hours on a day, a detailed warning dialog now shows you exactly which projects have hours already assigned, helping you manage your time better.
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.15)' : '#eef2ff',
+            borderRadius: 1,
+            border: '1px solid #c7d2fe'
+          }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: '#4f46e5' }}>
+              💡 TIP
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem', color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#4b5563' }}>
+              Use the grayed-out dates as a guide - they indicate dates where adding more hours would exceed the 8-hour daily limit. Hover over these dates for more details.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={handleClosePatchNote} 
+            variant="contained"
+            sx={{
+              bgcolor: '#22c55e',
+              '&:hover': {
+                bgcolor: '#16a34a'
+              }
+            }}
+          >
+            Got It!
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

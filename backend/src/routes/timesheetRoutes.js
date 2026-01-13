@@ -9,7 +9,9 @@ const {
   submitTimesheet,
   approveTimesheet,
   rejectTimesheet,
-  deleteTimesheet
+  deleteTimesheet,
+  checkDateConflicts,
+  getConflictDetails
 } = require('../controllers/timesheetController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -22,6 +24,8 @@ router.route('/')
   .get(getAllTimesheets)
   .post(createTimesheet);
 
+router.post('/check-conflicts', checkDateConflicts);
+router.post('/conflicts-details', getConflictDetails);
 router.get('/user/:userId', getTimesheetsByUser);
 router.get('/project/:projectId', getTimesheetsByProject);
 

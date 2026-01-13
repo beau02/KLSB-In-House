@@ -43,6 +43,12 @@ export const TimesheetsPage = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [overtimeRequests, setOvertimeRequests] = useState([]);
+  const [conflictingDates, setConflictingDates] = useState([]);
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+  const [warningDetails, setWarningDetails] = useState({
+    conflicts: [],
+    pendingSubmit: false
+  });
   const [formData, setFormData] = useState({
     projectId: '',
     area: '',
@@ -169,13 +175,38 @@ export const TimesheetsPage = () => {
         detailedDescription: entry.detailedDescription || ''
       }));
       
-      setFormData({
+      const newFormData = {
         projectId: timesheet.projectId._id,
         area: timesheet.area || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
-      });
+      };
+      
+      setFormData(newFormData);
+      
+      // Check for conflicts
+      try {
+        const result = await timesheetService.checkConflicts(
+          timesheet.month,
+          timesheet.year,
+          newFormData.entries,
+          timesheet._id
+        );
+        
+        if (result.hasConflicts) {
+          const conflictMap = {};
+          result.conflictingDates.forEach(conflict => {
+            conflictMap[conflict.date] = conflict;
+          });
+          setConflictingDates(conflictMap);
+        } else {
+          setConflictingDates([]);
+        }
+      } catch (error) {
+        console.error('Error checking conflicts:', error);
+        setConflictingDates([]);
+      }
     } else {
       setSelectedTimesheet(null);
       const currentMonth = new Date().getMonth() + 1;
@@ -188,6 +219,8 @@ export const TimesheetsPage = () => {
         year: currentYear,
         entries: generateEmptyEntries(currentMonth, currentYear)
       });
+      
+      setConflictingDates([]);
     }
     
     setDialogOpen(true);
@@ -196,6 +229,31 @@ export const TimesheetsPage = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedTimesheet(null);
+    setConflictingDates([]);
+  };
+
+  const checkForDateConflicts = async () => {
+    try {
+      const result = await timesheetService.checkConflicts(
+        formData.month,
+        formData.year,
+        formData.entries,
+        selectedTimesheet?._id
+      );
+      
+      if (result.hasConflicts) {
+        const conflictMap = {};
+        result.conflictingDates.forEach(conflict => {
+          conflictMap[conflict.date] = conflict;
+        });
+        setConflictingDates(conflictMap);
+      } else {
+        setConflictingDates([]);
+      }
+    } catch (error) {
+      console.error('Error checking date conflicts:', error);
+      setConflictingDates([]);
+    }
   };
 
   const handleMonthYearChange = (field, value) => {
@@ -227,6 +285,17 @@ export const TimesheetsPage = () => {
       }
       
       newEntries[index][field] = numValue;
+      
+      // Check for date conflicts if normal hours changed
+      if (field === 'normalHours') {
+        const updatedFormData = { ...formData, entries: newEntries };
+        setFormData(updatedFormData);
+        // Debounce the check to avoid too many API calls
+        setTimeout(() => {
+          checkForDateConflicts();
+        }, 300);
+        return;
+      }
     } else if (field === 'hoursCode') {
       const legendItem = hoursLegend.find(h => h.value === value);
       newEntries[index].hoursCode = value;
@@ -238,6 +307,14 @@ export const TimesheetsPage = () => {
       if (value === 'PH' && !newEntries[index].description) {
         newEntries[index].description = 'Public Holiday';
       }
+      
+      // Check for conflicts after hoursCode change
+      const updatedFormData = { ...formData, entries: newEntries };
+      setFormData(updatedFormData);
+      setTimeout(() => {
+        checkForDateConflicts();
+      }, 300);
+      return;
     } else {
       newEntries[index][field] = value;
     }
@@ -261,6 +338,41 @@ export const TimesheetsPage = () => {
 
   const handleSubmit = async () => {
     try {
+      // Check for conflicting dates
+      if (Object.keys(conflictingDates).length > 0) {
+        // Fetch detailed conflict information for each conflicted date
+        const conflictDetails = [];
+        
+        for (const dateKey in conflictingDates) {
+          const dayNum = parseInt(dateKey);
+          try {
+            const details = await timesheetService.getConflictDetails(
+              formData.month,
+              formData.year,
+              dayNum,
+              selectedTimesheet?._id
+            );
+            
+            if (details.conflictDetails && details.conflictDetails.length > 0) {
+              conflictDetails.push({
+                date: dayNum,
+                existingHours: details.totalExistingHours,
+                details: details.conflictDetails
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching conflict details:', error);
+          }
+        }
+        
+        setWarningDetails({
+          conflicts: conflictDetails,
+          pendingSubmit: true
+        });
+        setWarningDialogOpen(true);
+        return;
+      }
+
       // Validate that OT hours have approved requests
       const invalidEntries = formData.entries.filter(entry => {
         if (entry.otHours > 0) {
@@ -622,92 +734,115 @@ export const TimesheetsPage = () => {
                     {formData.entries.map((entry, index) => {
                       const entryDate = moment(entry.date);
                       const isWeekend = entryDate.day() === 0 || entryDate.day() === 6;
+                      const dayOfMonth = entryDate.getDate();
+                      const hasConflict = conflictingDates[dayOfMonth];
+                      const isConflictedDate = hasConflict && entry.normalHours > 0;
                       
                       return (
-                        <TableRow key={index} sx={{ bgcolor: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#f5f5f5') : 'inherit' }}>
-                          <TableCell>{entryDate.format('DD')}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ color: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? '#fca5a5' : '#d32f2f') : 'inherit' }}>
-                              {entryDate.format('ddd')}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <FormControl size="small" fullWidth>
-                              <Select
-                                multiple
-                                value={entry.disciplineCodes || []}
-                                onChange={(e) => handleEntryDisciplineChange(index, e.target.value)}
-                                disabled={isReadOnly(selectedTimesheet)}
-                                displayEmpty
-                                renderValue={(selected) => (selected && selected.length > 0 ? selected.join(', ') : 'Select code...')}
+                        <Tooltip 
+                          title={isConflictedDate ? `This date already has ${hasConflict.existingHours} hrs assigned in another timesheet. Cannot add more hours.` : ''}
+                          arrow
+                        >
+                          <TableRow 
+                            key={index} 
+                            sx={{ 
+                              bgcolor: isConflictedDate 
+                                ? (theme) => theme.palette.mode === 'dark' ? 'rgba(200, 200, 200, 0.15)' : '#e8e8e8'
+                                : isWeekend ? (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#f5f5f5' 
+                                : 'inherit',
+                              opacity: isConflictedDate ? 0.6 : 1,
+                              pointerEvents: isConflictedDate ? 'none' : 'auto'
+                            }}
+                          >
+                            <TableCell sx={{ opacity: isConflictedDate ? 0.7 : 1 }}>{entryDate.format('DD')}</TableCell>
+                            <TableCell>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: (theme) => isWeekend ? (theme.palette.mode === 'dark' ? '#fca5a5' : '#d32f2f') : 'inherit',
+                                  opacity: isConflictedDate ? 0.7 : 1
+                                }}
                               >
-                                <MenuItem value=""><em>Select code...</em></MenuItem>
-                                {disciplineCodes.map((code) => (
-                                  <MenuItem
-                                    key={code}
-                                    value={code}
-                                    disabled={!(entry.disciplineCodes || []).includes(code) && (entry.disciplineCodes || []).length >= MAX_DISCIPLINE_CODES}
-                                  >
-                                    {code}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                          <TableCell>
-                            <FormControl size="small" fullWidth>
-                              <Select
-                                value={entry.platform || ''}
-                                onChange={(e) => handleEntryPlatformChange(index, e.target.value)}
-                                disabled={isReadOnly(selectedTimesheet)}
-                                displayEmpty
-                              >
-                                <MenuItem value=""><em>None</em></MenuItem>
-                                {selectedProject?.platforms?.map((platform) => (
-                                  <MenuItem key={platform} value={platform}>{platform}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                          <TableCell>
-                            {entry.hoursCode === 'CUSTOM' ? (
-                              <Box sx={{ display: 'flex', gap: 1 }}>
-                                <FormControl size="small" sx={{ minWidth: 130 }}>
+                                {entryDate.format('ddd')}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <FormControl size="small" fullWidth>
+                                <Select
+                                  multiple
+                                  value={entry.disciplineCodes || []}
+                                  onChange={(e) => handleEntryDisciplineChange(index, e.target.value)}
+                                  disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
+                                  displayEmpty
+                                  renderValue={(selected) => (selected && selected.length > 0 ? selected.join(', ') : 'Select code...')}
+                                >
+                                  <MenuItem value=""><em>Select code...</em></MenuItem>
+                                  {disciplineCodes.map((code) => (
+                                    <MenuItem
+                                      key={code}
+                                      value={code}
+                                      disabled={!(entry.disciplineCodes || []).includes(code) && (entry.disciplineCodes || []).length >= MAX_DISCIPLINE_CODES}
+                                    >
+                                      {code}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                            <TableCell>
+                              <FormControl size="small" fullWidth>
+                                <Select
+                                  value={entry.platform || ''}
+                                  onChange={(e) => handleEntryPlatformChange(index, e.target.value)}
+                                  disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
+                                  displayEmpty
+                                >
+                                  <MenuItem value=""><em>None</em></MenuItem>
+                                  {selectedProject?.platforms?.map((platform) => (
+                                    <MenuItem key={platform} value={platform}>{platform}</MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                            <TableCell>
+                              {entry.hoursCode === 'CUSTOM' ? (
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <FormControl size="small" sx={{ minWidth: 130 }}>
+                                    <Select
+                                      value="CUSTOM"
+                                      onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
+                                      disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
+                                    >
+                                      {hoursLegend.map(h => (
+                                        <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={entry.normalHours || ''}
+                                    onChange={(e) => handleEntryChange(index, 'normalHours', e.target.value)}
+                                    inputProps={{ min: 0, max: 24, step: 0.5 }}
+                                    disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
+                                    placeholder="hrs"
+                                    sx={{ width: 80 }}
+                                  />
+                                </Box>
+                              ) : (
+                                <FormControl size="small" fullWidth>
                                   <Select
-                                    value="CUSTOM"
+                                    value={entry.hoursCode || '0'}
                                     onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
-                                    disabled={isReadOnly(selectedTimesheet)}
+                                    disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
                                   >
                                     {hoursLegend.map(h => (
                                       <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>
                                     ))}
                                   </Select>
                                 </FormControl>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={entry.normalHours || ''}
-                                  onChange={(e) => handleEntryChange(index, 'normalHours', e.target.value)}
-                                  inputProps={{ min: 0, max: 24, step: 0.5 }}
-                                  disabled={isReadOnly(selectedTimesheet)}
-                                  placeholder="hrs"
-                                  sx={{ width: 80 }}
-                                />
-                              </Box>
-                            ) : (
-                              <FormControl size="small" fullWidth>
-                                <Select
-                                  value={entry.hoursCode || '0'}
-                                  onChange={(e) => handleEntryChange(index, 'hoursCode', e.target.value)}
-                                  disabled={isReadOnly(selectedTimesheet)}
-                                >
-                                  {hoursLegend.map(h => (
-                                    <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            )}
-                          </TableCell>
+                              )}
+                            </TableCell>
                           <TableCell>
                             {(() => {
                               // Check if there's an approved OT request for this date
@@ -721,9 +856,9 @@ export const TimesheetsPage = () => {
                               });
                               
                               const hasApprovedOT = !!approvedOT;
-                              const isOTDisabled = isReadOnly(selectedTimesheet) || !hasApprovedOT;
+                              const isOTDisabled = isReadOnly(selectedTimesheet) || !hasApprovedOT || isConflictedDate;
                               
-                              return !hasApprovedOT && !isReadOnly(selectedTimesheet) ? (
+                              return !hasApprovedOT && !isReadOnly(selectedTimesheet) && !isConflictedDate ? (
                                 <Tooltip title="No approved OT request for this date. Submit an OT request first." arrow>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <TextField
@@ -752,7 +887,7 @@ export const TimesheetsPage = () => {
                                     value={entry.otHours || ''}
                                     onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
                                     inputProps={{ min: 0, max: approvedOT?.hours || 24, step: 0.5 }}
-                                    disabled={isReadOnly(selectedTimesheet)}
+                                    disabled={isOTDisabled}
                                   />
                                 </Tooltip>
                               );
@@ -763,7 +898,7 @@ export const TimesheetsPage = () => {
                               <Select
                                 value={entry.description || ''}
                                 onChange={(e) => handleEntryChange(index, 'description', e.target.value)}
-                                disabled={isReadOnly(selectedTimesheet)}
+                                disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
                                 displayEmpty
                               >
                                 <MenuItem value=""><em>Select description...</em></MenuItem>
@@ -780,12 +915,13 @@ export const TimesheetsPage = () => {
                               value={entry.detailedDescription || ''}
                               onChange={(e) => handleEntryChange(index, 'detailedDescription', e.target.value)}
                               placeholder="Add more details..."
-                              disabled={isReadOnly(selectedTimesheet)}
+                              disabled={isReadOnly(selectedTimesheet) || isConflictedDate}
                               multiline
                               maxRows={2}
                             />
                           </TableCell>
                         </TableRow>
+                      </Tooltip>
                       );
                     })}
                   </TableBody>
@@ -824,6 +960,57 @@ export const TimesheetsPage = () => {
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={warningDialogOpen} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fef2f2', fontWeight: 700 }}>
+          ⚠️ Daily Hours Limit Exceeded
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body2" sx={{ mb: 3, color: (theme) => theme.palette.mode === 'dark' ? '#fca5a5' : '#991b1b' }}>
+            You cannot exceed 8 hours of normal work per day. The following dates would exceed the limit:
+          </Typography>
+          
+          {warningDetails.conflicts.map((conflict, idx) => (
+            <Box key={idx} sx={{ mb: 3, p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.8)' : '#f9fafb', borderRadius: 1, border: '1px solid #e5e7eb' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626' }}>
+                Date: {moment(`${formData.year}-${formData.month}-${conflict.date}`, 'YYYY-M-D').format('dddd, MMM DD, YYYY')}
+              </Typography>
+              
+              <Box sx={{ ml: 2, mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1.5 }}>
+                  <strong>Existing hours assigned to other timesheets:</strong>
+                </Typography>
+                {conflict.details.map((detail, detailIdx) => (
+                  <Box key={detailIdx} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(51, 65, 85, 0.6)' : '#f3f4f6', borderRadius: 0.5 }}>
+                    <Typography variant="body2">
+                      {detail.projectCode} - {detail.projectName}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {detail.normalHours} hrs
+                    </Typography>
+                  </Box>
+                ))}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1.5, p: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#eef2ff', borderRadius: 0.5, border: '1px solid #c7d2fe' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    Total on this date:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: (theme) => theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626' }}>
+                    {conflict.existingHours} hrs
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          ))}
+          
+          <Typography variant="body2" sx={{ mt: 2, color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#475569' }}>
+            Please adjust your hours for these dates to avoid exceeding the daily limit.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWarningDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Container>
