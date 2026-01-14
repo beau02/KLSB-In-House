@@ -148,9 +148,19 @@ export const timesheetService = {
     return data;
   },
 
-  getByUser: async (userId, params) => {
+  getByUser: async (userId, params, options = {}) => {
     const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-    const { data } = await cachedGet(`/timesheets/user/${userId}${queryString}`, { ttl: 180 });
+    const url = `/timesheets/user/${userId}${queryString}`;
+    
+    // If bypassCache is true, clear cache first and fetch fresh
+    if (options.bypassCache) {
+      clearCacheEntry(url);
+      console.log('BYPASSING CACHE for:', url);
+      const response = await api.get(url);
+      return response.data;
+    }
+    
+    const { data } = await cachedGet(url, { ttl: 180 });
     return data;
   },
 
@@ -166,9 +176,16 @@ export const timesheetService = {
   },
 
   update: async (id, timesheetData) => {
+    console.log('Sending PUT request to /timesheets/' + id);
+    console.log('Data:', timesheetData);
     const response = await api.put(`/timesheets/${id}`, timesheetData);
+    console.log('Update response:', response.data);
+    
+    // Clear all caches
     clearCacheEntry('/timesheets');
     clearCacheEntry(`/timesheets/${id}`);
+    clearCacheEntry('/timesheets/user');
+    
     return response.data;
   },
 

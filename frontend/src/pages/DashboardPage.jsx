@@ -47,7 +47,7 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     // Check if patch notes have been shown for this version
-    const patchVersion = 'v2.2.0';
+    const patchVersion = 'v2.3.0';
     const shownPatchKey = `patchNoteShown_${patchVersion}`;
     const hasShownPatch = localStorage.getItem(shownPatchKey);
     
@@ -375,7 +375,7 @@ export const DashboardPage = () => {
           color: '#16a34a'
         }}>
           <NewReleases />
-          What's New in v2.2.0
+          What's New in v2.3.0
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.mode === 'dark' ? '#e5e7eb' : '#374151' }}>
@@ -387,10 +387,10 @@ export const DashboardPage = () => {
               <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  🔒 Multi-Timesheet Daily Hour Limit
+                  ✏️ Edit Project and Area for Draft/Rejected Timesheets
                 </Typography>
                 <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  When you have multiple timesheets in the same month, the system now prevents exceeding 8 hours per day across all projects. Dates that already have 8+ hours from other timesheets are automatically locked and grayed out with a lock icon.
+                  You can now change the Project and Area fields when your timesheet is in DRAFT or REJECTED status. This helps you correct mistakes before submitting or after receiving feedback from your supervisor.
                 </Typography>
               </Box>
             </Box>
@@ -399,22 +399,10 @@ export const DashboardPage = () => {
               <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  🗑️ Fixed Timesheet Deletion
+                  🔄 Instant Updates After Actions
                 </Typography>
                 <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  Deleting rejected timesheets now properly removes them from your list immediately. Previously deleted timesheets would reappear after refresh.
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  ✏️ Improved Edit Dialog
-                </Typography>
-                <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  Opening your draft timesheet now works instantly without delays. The dialog opens immediately, and data loads in the background for a smoother experience.
+                  When you update a timesheet, approve/reject as a supervisor, or make any changes, the list now immediately refreshes to show the latest data without needing to manually reload the page.
                 </Typography>
               </Box>
             </Box>
@@ -422,11 +410,11 @@ export const DashboardPage = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <CheckCircleOutline sx={{ color: '#22c55e', fontSize: 24, flexShrink: 0, mt: 0.5 }} />
               <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 707, mb: 0.5 }}>
-                  ⚠️ Conflict Prevention Dialog
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  🐛 Fixed Project Update Not Showing
                 </Typography>
                 <Typography variant="body2" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#6b7280' }}>
-                  If you try to exceed 8 hours on a day, a detailed warning shows you exactly which projects have hours assigned and how much. This helps you manage your time across multiple timesheets.
+                  Resolved an issue where changing a timesheet's project would update successfully in the database but the list would still show the old project due to cached data. All updates now display immediately.
                 </Typography>
               </Box>
             </Box>
@@ -442,7 +430,7 @@ export const DashboardPage = () => {
               💡 HOW IT WORKS
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '0.875rem', color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#4b5563' }}>
-              When editing a timesheet, dates with 8+ hours already assigned in other timesheets will appear grayed out with a lock icon. Hover over them to see which projects have hours on that date. You cannot add hours to locked dates - reduce hours in the other timesheet first.
+              When your timesheet is in <strong>DRAFT</strong> or <strong>REJECTED</strong> status, you'll see that the Project and Area dropdown fields are now editable. Simply click on them to change to a different project or area. Once you submit the timesheet, these fields become locked until it's rejected again.
             </Typography>
           </Box>
         </DialogContent>

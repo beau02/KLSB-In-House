@@ -109,17 +109,23 @@ export const TimesheetsPage = () => {
     loadData();
   }, [user, selectedMonth, selectedYear]);
 
-  const loadData = async () => {
+  const loadData = async (bypassCache = false) => {
     try {
       const projectsRes = await projectService.getAll({ status: 'active' });
       let timesheetsRes = { timesheets: [] };
       
       if (user) {
         const userId = user._id || user.id;
-        timesheetsRes = await timesheetService.getByUser(userId, { month: selectedMonth, year: selectedYear });
+        console.log('LOADING TIMESHEETS - bypassCache:', bypassCache);
+        timesheetsRes = await timesheetService.getByUser(
+          userId, 
+          { month: selectedMonth, year: selectedYear },
+          { bypassCache }
+        );
       }
 
       const fetchedTimesheets = timesheetsRes.timesheets || timesheetsRes.timesheet || [];
+      console.log('LOADED TIMESHEETS:', fetchedTimesheets.length);
       setTimesheets(fetchedTimesheets);
       setProjects(projectsRes.projects || []);
     } catch (error) {
@@ -175,13 +181,21 @@ export const TimesheetsPage = () => {
         detailedDescription: entry.detailedDescription || ''
       }));
       
+      const projectIdValue = timesheet.projectId?._id || timesheet.projectId;
+      
       const newFormData = {
-        projectId: timesheet.projectId._id,
+        projectId: projectIdValue,
         area: timesheet.area || '',
         month: timesheet.month,
         year: timesheet.year,
         entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
       };
+      
+      console.log('=== OPENING TIMESHEET ===');
+      console.log('Timesheet projectId:', timesheet.projectId);
+      console.log('Extracted projectId:', projectIdValue);
+      console.log('FormData:', newFormData);
+      console.log('========================');
       
       setFormData(newFormData);
       
@@ -370,8 +384,8 @@ export const TimesheetsPage = () => {
 
   const handleSubmit = async () => {
     try {
-      // Check for conflicting dates
-      if (Object.keys(conflictingDates).length > 0) {
+      // Check for conflicting dates (skip for draft/rejected updates)
+      if (Object.keys(conflictingDates).length > 0 && !selectedTimesheet) {
         // Fetch detailed conflict information for each conflicted date
         const conflictDetails = [];
         
@@ -442,15 +456,21 @@ export const TimesheetsPage = () => {
       
       if (selectedTimesheet) {
         console.log('Updating timesheet:', selectedTimesheet._id);
+        console.log('Full payload being sent:', JSON.stringify(payload, null, 2));
         await timesheetService.update(selectedTimesheet._id, payload);
+        console.log('✓ Timesheet updated successfully');
+        alert('Timesheet updated successfully!');
       } else {
         console.log('Creating new timesheet');
-        const response = await timesheetService.create(payload);
-        console.log('Create response:', response);
+        await timesheetService.create(payload);
+        console.log('✓ Timesheet created successfully');
+        alert('Timesheet created successfully!');
       }
       
       handleCloseDialog();
-      loadData();
+      console.log('Reloading timesheets data with cache bypass...');
+      await loadData(true); // Force fresh data fetch by bypassing cache
+      console.log('✓ Data reloaded from server');
     } catch (error) {
       console.error('=== ERROR DETAILS ===');
       console.error('Full error:', error);
@@ -499,6 +519,10 @@ export const TimesheetsPage = () => {
 
   const isReadOnly = (timesheet) => {
     return timesheet && ['approved', 'submitted', 'resubmitted'].includes(timesheet.status);
+  };
+
+  const canEditProjectAndArea = (timesheet) => {
+    return !timesheet || ['draft', 'rejected'].includes(timesheet.status);
   };
 
   const validateOTHours = (date, hours) => {
@@ -685,7 +709,7 @@ export const TimesheetsPage = () => {
                       platform: selectedProj?.platforms?.[0] || ''
                     });
                   }}
-                  disabled={!!selectedTimesheet}
+                  disabled={!canEditProjectAndArea(selectedTimesheet)}
                 >
                   {projects.map((project) => (
                     <MenuItem key={project._id} value={project._id}>
@@ -703,7 +727,7 @@ export const TimesheetsPage = () => {
                   value={formData.area}
                   label="Area"
                   onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                  disabled={isReadOnly(selectedTimesheet)}
+                  disabled={!canEditProjectAndArea(selectedTimesheet)}
                 >
                   <MenuItem value="">None</MenuItem>
                   {areaOptions.map((area) => (
@@ -997,7 +1021,7 @@ export const TimesheetsPage = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={isReadOnly(selectedTimesheet) || !formData.projectId}
+            disabled={!formData.projectId || (selectedTimesheet && ['approved', 'submitted', 'resubmitted'].includes(selectedTimesheet.status))}
           >
             {selectedTimesheet ? 'Update' : 'Create'}
           </Button>

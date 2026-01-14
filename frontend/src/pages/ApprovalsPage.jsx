@@ -127,8 +127,8 @@ export const ApprovalsPage = () => {
       
       console.log('Calling approve API with ID:', id);
       await timesheetService.approve(id, payloadComments);
+      await loadTimesheets();
       handleCloseDialog();
-      loadTimesheets();
     } catch (error) {
       console.error('Error approving timesheet:', error);
       alert(error.response?.data?.message || 'Error approving timesheet');
@@ -158,8 +158,8 @@ export const ApprovalsPage = () => {
       }
       
       await timesheetService.reject(id, comments);
+      await loadTimesheets();
       handleCloseDialog();
-      loadTimesheets();
     } catch (error) {
       console.error('Error rejecting timesheet:', error);
       alert(error.response?.data?.message || 'Error rejecting timesheet');

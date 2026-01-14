@@ -324,10 +324,28 @@ exports.createTimesheet = async (req, res) => {
 // @access  Private
 exports.updateTimesheet = async (req, res) => {
   try {
-    const timesheet = await Timesheet.findById(req.params.id);
+    let timesheet = await Timesheet.findById(req.params.id);
     
     if (!timesheet) {
-      return res.status(404).json({ message: 'Timesheet not found' });
+      // Timesheet might have been recreated with a different ID
+      // Try to find it by user, month, year
+      const { projectId, month, year } = req.body;
+      if (projectId) {
+        timesheet = await Timesheet.findOne({
+          userId: req.user.id,
+          projectId: projectId,
+          month: month,
+          year: year
+        });
+        
+        if (timesheet) {
+          console.log('Found timesheet with new ID after recreation:', timesheet._id);
+        }
+      }
+      
+      if (!timesheet) {
+        return res.status(404).json({ message: 'Timesheet not found. It may have been deleted. Please refresh the page.' });
+      }
     }
 
     // Check if user owns this timesheet
@@ -340,7 +358,24 @@ exports.updateTimesheet = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update approved or submitted timesheet' });
     }
 
-    const { entries, area, comments } = req.body;
+    const { entries, projectId, area, comments } = req.body;
+    
+    console.log('\n========== UPDATE TIMESHEET REQUEST ==========');
+    console.log('Timesheet ID:', req.params.id);
+    console.log('User ID:', req.user.id);
+    console.log('Received projectId:', projectId, '(type: ' + typeof projectId + ')');
+    console.log('Received area:', area, '(type: ' + typeof area + ')');
+    console.log('Received entries count:', entries ? entries.length : 0);
+    console.log('Received comments:', comments ? 'yes' : 'no');
+    console.log('============================================\n');
+    
+    console.log('=== UPDATE DEBUG ===');
+    console.log('Received projectId:', projectId);
+    console.log('Received area:', area);
+    console.log('Current projectId:', timesheet.projectId);
+    console.log('Current area:', timesheet.area);
+    console.log('===================');
+    
     const normalizedEntries = entries ? normalizeEntriesWithDiscipline(entries) : undefined;
 
     // Validate date conflicts - check if updated entries would conflict with other timesheets
@@ -372,13 +407,14 @@ exports.updateTimesheet = async (req, res) => {
 
     // Validate OT hours against approved overtime requests
     if (entries && Array.isArray(entries)) {
+      const projectToCheck = projectId || timesheet.projectId;
       for (const entry of entries) {
         if (entry.type === 'ot' && entry.hours > 0) {
           const entryDate = new Date(timesheet.year, timesheet.month - 1, entry.day);
           
           const approvedRequest = await OvertimeRequest.findOne({
             userId: timesheet.userId,
-            projectId: timesheet.projectId,
+            projectId: projectToCheck,
             date: entryDate,
             status: 'approved'
           });
@@ -402,10 +438,6 @@ exports.updateTimesheet = async (req, res) => {
       }
     }
 
-    if (normalizedEntries) timesheet.entries = normalizedEntries;
-    if (area !== undefined) timesheet.area = area;
-    if (comments) timesheet.comments = comments;
-
     // If timesheet was rejected, reset it to draft when user edits
     if (timesheet.status === 'rejected') {
       timesheet.status = 'draft';
@@ -414,14 +446,93 @@ exports.updateTimesheet = async (req, res) => {
       timesheet.rejectionReason = undefined;
     }
 
-    await timesheet.save();
-    await timesheet.populate('projectId', 'projectCode projectName');
+    console.log('=== UPDATING TIMESHEET ===');
+    console.log('Timesheet ID:', timesheet._id);
+    console.log('Current status:', timesheet.status);
+    console.log('Requested projectId:', projectId);
+    console.log('Requested area:', area);
+    console.log('===========================');
+
+    // Build update object
+    const updateData = {};
+    
+    if (normalizedEntries) {
+      console.log('✓ Will update entries');
+      updateData.entries = normalizedEntries;
+    }
+    
+    if (projectId !== undefined) {
+      console.log('✓ Will update projectId');
+      console.log('  Old:', timesheet.projectId);
+      console.log('  New:', projectId);
+      updateData.projectId = projectId;
+    }
+    
+    if (area !== undefined) {
+      console.log('✓ Will update area');
+      console.log('  Old:', timesheet.area);
+      console.log('  New:', area);
+      updateData.area = area;
+    }
+    
+    if (comments) {
+      console.log('✓ Will update comments');
+      updateData.comments = comments;
+    }
+    
+    // If rejected, reset to draft
+    if (timesheet.status === 'rejected') {
+      console.log('✓ Resetting rejected status to draft');
+      updateData.status = 'draft';
+      updateData.approvedBy = null;
+      updateData.approvalDate = null;
+      updateData.rejectionReason = null;
+    }
+
+    // Use findOneAndUpdate with $set to bypass unique constraint issues
+    console.log('\nUpdating timesheet...');
+    const updated = await Timesheet.findOneAndUpdate(
+      { _id: timesheet._id },
+      { $set: updateData },
+      { 
+        new: true,
+        runValidators: false
+      }
+    ).populate('projectId', 'projectCode projectName');
+
+    // Verify the update was saved by re-fetching from database
+    const verified = await Timesheet.findById(timesheet._id).populate('projectId', 'projectCode projectName');
+    
+    console.log('\n========== UPDATE COMPLETE ==========');
+    console.log('✓ Success!');
+    console.log('Timesheet ID:', updated._id);
+    console.log('Project:', updated.projectId?.projectName);
+    console.log('ProjectId:', updated.projectId?._id);
+    console.log('Area:', updated.area);
+    console.log('Status:', updated.status);
+    console.log('\n--- VERIFICATION FROM DB ---');
+    console.log('Verified Project:', verified.projectId?.projectName);
+    console.log('Verified ProjectId:', verified.projectId?._id);
+    console.log('Verified Area:', verified.area);
+    console.log('=====================================\n');
 
     res.json({
       success: true,
-      timesheet
+      timesheet: updated
     });
   } catch (error) {
+    console.error('Update error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error name:', error.name);
+    
+    // Handle duplicate key error (unique constraint violation)
+    if (error.code === 11000 || error.name === 'MongoServerError') {
+      return res.status(400).json({ 
+        message: 'A timesheet for this project already exists for this month/year. Please delete the other timesheet first or edit it instead.',
+        error: 'Duplicate key error'
+      });
+    }
+    
     res.status(500).json({ message: error.message });
   }
 };
