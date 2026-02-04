@@ -224,7 +224,7 @@ exports.deleteOvertimeRequest = async (req, res) => {
   }
 };
 
-// @desc    Approve overtime request
+// @desc    Approve overtime request and auto-fill timesheet
 // @route   PUT /api/overtime-requests/:id/approve
 // @access  Private/Admin/Manager
 exports.approveOvertimeRequest = async (req, res) => {
@@ -245,6 +245,9 @@ exports.approveOvertimeRequest = async (req, res) => {
 
     await overtimeRequest.save();
 
+    // Auto-fill timesheet entries with approved overtime hours
+    await autoFillTimesheetWithOvertimeHours(overtimeRequest);
+
     const populatedRequest = await OvertimeRequest.findById(overtimeRequest._id)
       .populate('userId', 'firstName lastName email department')
       .populate('projectId', 'projectCode projectName')
@@ -256,6 +259,91 @@ exports.approveOvertimeRequest = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Helper function to auto-fill timesheet with approved overtime hours
+const autoFillTimesheetWithOvertimeHours = async (overtimeRequest) => {
+  try {
+    const { userId, projectId, dailyHours, disciplineCode, area } = overtimeRequest;
+
+    console.log('=== AUTO-FILL TIMESHEET ===');
+    console.log('User ID:', userId);
+    console.log('Project ID:', projectId);
+    console.log('Daily Hours:', dailyHours);
+    console.log('===========================');
+
+    // Process each day in the approved request
+    for (const dayEntry of dailyHours) {
+      const entryDate = new Date(dayEntry.date);
+      const month = entryDate.getMonth() + 1;
+      const year = entryDate.getFullYear();
+      const dayOfMonth = entryDate.getDate();
+
+      console.log(`Processing: ${dayOfMonth}/${month}/${year} with ${dayEntry.hours} hours`);
+
+      // Find or create timesheet for the given month/year/project
+      let timesheet = await Timesheet.findOne({
+        userId,
+        projectId,
+        month,
+        year
+      });
+
+      if (!timesheet) {
+        // Create new timesheet if it doesn't exist
+        timesheet = new Timesheet({
+          userId,
+          projectId,
+          month,
+          year,
+          entries: [],
+          status: 'draft'
+        });
+        console.log('Created new timesheet');
+      } else {
+        console.log('Found existing timesheet');
+      }
+
+      // Check if entry already exists for this date
+      const existingEntryIndex = timesheet.entries.findIndex(entry => {
+        const entryDateCheck = new Date(entry.date);
+        return entryDateCheck.getDate() === dayOfMonth &&
+               entryDateCheck.getMonth() === month - 1 &&
+               entryDateCheck.getFullYear() === year;
+      });
+
+      if (existingEntryIndex >= 0) {
+        // Update existing entry: add the approved OT hours
+        timesheet.entries[existingEntryIndex].otHours = dayEntry.hours;
+        console.log('Updated existing entry');
+      } else {
+        // Create new entry with the approved OT hours
+        timesheet.entries.push({
+          date: entryDate,
+          otHours: dayEntry.hours,
+          normalHours: 0,
+          disciplineCodes: disciplineCode ? [disciplineCode] : []
+        });
+        console.log('Created new entry with', dayEntry.hours, 'hours');
+      }
+
+      // Update discipline code and area if provided
+      if (disciplineCode) {
+        timesheet.disciplineCode = [disciplineCode];
+      }
+      if (area) {
+        timesheet.area = area;
+      }
+
+      // Save the updated timesheet
+      await timesheet.save();
+      console.log('Saved timesheet');
+    }
+    console.log('===========================');
+  } catch (error) {
+    // Log the error but don't fail the approval
+    console.error('Error auto-filling timesheet with overtime hours:', error);
   }
 };
 

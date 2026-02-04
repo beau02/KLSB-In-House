@@ -135,32 +135,75 @@ export const TimesheetsPage = () => {
     }
   };
 
-  const generateEmptyEntries = (month, year) => {
+  const generateEmptyEntries = (month, year, approvedOTRequests = []) => {
     const daysInMonth = moment(`${year}-${month}`, 'YYYY-M').daysInMonth();
     const entries = [];
     
+    console.log('=== GENERATE EMPTY ENTRIES ===');
+    console.log('Month:', month, 'Year:', year);
+    console.log('Approved OT Requests count:', approvedOTRequests.length);
+    console.log('Approved OT Requests:', JSON.stringify(approvedOTRequests, null, 2));
+    console.log('===============================');
+    
     for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      // Check if there's an approved OT for this date
+      let otHours = 0;
+      let disciplineCodes = [];
+      
+      for (const otRequest of approvedOTRequests) {
+        console.log(`\nProcessing OT Request:`, {
+          status: otRequest.status,
+          hasDailyHours: !!otRequest.dailyHours,
+          dailyHoursCount: otRequest.dailyHours?.length || 0,
+          dailyHours: otRequest.dailyHours
+        });
+        
+        if (otRequest.status === 'approved' && otRequest.dailyHours) {
+          // Check if this date is in the OT request's daily hours
+          for (const dayEntry of otRequest.dailyHours) {
+            const dayDate = moment(dayEntry.date).format('YYYY-MM-DD');
+            console.log(`  Comparing ${dateStr} with OT date ${dayDate}`);
+            if (dayDate === dateStr) {
+              otHours = dayEntry.hours;
+              if (otRequest.disciplineCode) {
+                disciplineCodes = [otRequest.disciplineCode];
+              }
+              console.log(`  ✓ MATCHED! Setting ${dateStr} to ${otHours} hours`);
+              break;
+            }
+          }
+        }
+      }
+      
       entries.push({
-        date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        disciplineCodes: [],
+        date: dateStr,
+        disciplineCodes: disciplineCodes,
         platform: '',
         normalHours: 0,
-        otHours: 0,
+        otHours: otHours,
         hoursCode: '0',
         description: '',
         detailedDescription: ''
       });
     }
     
+    console.log('Generated entries count:', entries.length);
+    console.log('Entries with OT hours:', entries.filter(e => e.otHours > 0).length);
+    console.log('===============================');
+    
     return entries;
   };
 
   const handleOpenDialog = async (timesheet = null) => {
     // Load overtime requests
+    let loadedOTRequests = [];
     try {
       const otRes = await overtimeRequestService.getMyRequests();
       console.log('Loaded OT requests:', otRes); // Debug log
-      setOvertimeRequests(otRes.requests || otRes.overtimeRequests || []);
+      loadedOTRequests = otRes.requests || otRes.overtimeRequests || [];
+      setOvertimeRequests(loadedOTRequests);
     } catch (error) {
       console.error('Error loading OT requests:', error);
       setOvertimeRequests([]);
@@ -169,17 +212,41 @@ export const TimesheetsPage = () => {
     if (timesheet) {
       setSelectedTimesheet(timesheet);
       
-      const migratedEntries = (timesheet.entries || []).map(entry => ({
-        date: entry.date,
-        disciplineCodes: toDisciplineArray(entry.disciplineCodes || entry.disciplineCode || timesheet.disciplineCode),
-        platform: entry.platform || timesheet.platform || '',
-        normalHours: entry.normalHours !== undefined ? entry.normalHours : (entry.hours || 0),
-        otHours: entry.otHours !== undefined ? entry.otHours : 0,
-        hoursCode: entry.hoursCode !== undefined ? entry.hoursCode : 
-          (entry.normalHours === 8 ? '8' : entry.normalHours === 4 ? '4' : entry.normalHours === 0 ? '0' : ''),
-        description: entry.description || '',
-        detailedDescription: entry.detailedDescription || ''
-      }));
+      // First generate entries with OT data
+      const entriesWithOT = generateEmptyEntries(timesheet.month, timesheet.year, loadedOTRequests);
+      
+      console.log('=== ENTRIES WITH OT DATA ===');
+      console.log('Entries with OT count:', entriesWithOT.filter(e => e.otHours > 0).length);
+      entriesWithOT.filter(e => e.otHours > 0).forEach(e => {
+        console.log(`  ${e.date}: ${e.otHours} hours`);
+      });
+      console.log('=============================');
+      
+      // Then migrate existing timesheet entries and merge with OT data
+      const migratedEntries = (timesheet.entries || []).map(entry => {
+        // Find matching entry from OT data by date
+        const otEntry = entriesWithOT.find(e => e.date === entry.date || 
+          moment(e.date).format('YYYY-MM-DD') === moment(entry.date).format('YYYY-MM-DD')
+        );
+        
+        const mergedEntry = {
+          date: entry.date,
+          disciplineCodes: toDisciplineArray(entry.disciplineCodes || entry.disciplineCode || timesheet.disciplineCode),
+          platform: entry.platform || timesheet.platform || '',
+          normalHours: entry.normalHours !== undefined ? entry.normalHours : (entry.hours || 0),
+          otHours: entry.otHours !== undefined ? entry.otHours : (otEntry?.otHours || 0), // Use OT data if not set
+          hoursCode: entry.hoursCode !== undefined ? entry.hoursCode : 
+            (entry.normalHours === 8 ? '8' : entry.normalHours === 4 ? '4' : entry.normalHours === 0 ? '0' : ''),
+          description: entry.description || '',
+          detailedDescription: entry.detailedDescription || ''
+        };
+        
+        if (mergedEntry.otHours > 0) {
+          console.log(`Merged entry: ${mergedEntry.date} OT: ${mergedEntry.otHours}`);
+        }
+        
+        return mergedEntry;
+      });
       
       const projectIdValue = timesheet.projectId?._id || timesheet.projectId;
       
@@ -188,7 +255,7 @@ export const TimesheetsPage = () => {
         area: timesheet.area || '',
         month: timesheet.month,
         year: timesheet.year,
-        entries: migratedEntries.length > 0 ? migratedEntries : generateEmptyEntries(timesheet.month, timesheet.year)
+        entries: migratedEntries.length > 0 ? migratedEntries : entriesWithOT
       };
       
       console.log('=== OPENING TIMESHEET ===');
@@ -263,7 +330,7 @@ export const TimesheetsPage = () => {
         area: '',
         month: currentMonth,
         year: currentYear,
-        entries: generateEmptyEntries(currentMonth, currentYear)
+        entries: generateEmptyEntries(currentMonth, currentYear, loadedOTRequests)
       });
       
       setConflictingDates([]);
@@ -540,12 +607,22 @@ export const TimesheetsPage = () => {
     
     // Find approved OT request for this date and project
     const approvedRequest = overtimeRequests.find(req => {
-      const reqDateStr = moment(req.date).format('YYYY-MM-DD');
       const reqProjectId = req.projectId?._id || req.projectId;
       
-      return reqDateStr === dateStr && 
-             reqProjectId === currentProjectId && 
-             req.status === 'approved';
+      if (req.status !== 'approved') return false;
+      if (reqProjectId !== currentProjectId) return false;
+      
+      // Check if using new format with dailyHours
+      if (req.dailyHours && Array.isArray(req.dailyHours)) {
+        return req.dailyHours.some(dayEntry => {
+          const dayDate = moment(dayEntry.date).format('YYYY-MM-DD');
+          return dayDate === dateStr;
+        });
+      }
+      
+      // Fallback to old format
+      const reqDateStr = moment(req.date).format('YYYY-MM-DD');
+      return reqDateStr === dateStr;
     });
     
     if (!approvedRequest) {
@@ -555,11 +632,22 @@ export const TimesheetsPage = () => {
       };
     }
     
+    // Get the approved hours for this date
+    let approvedHours = 0;
+    if (approvedRequest.dailyHours && Array.isArray(approvedRequest.dailyHours)) {
+      const dayEntry = approvedRequest.dailyHours.find(day => 
+        moment(day.date).format('YYYY-MM-DD') === dateStr
+      );
+      approvedHours = dayEntry?.hours || 0;
+    } else {
+      approvedHours = approvedRequest.hours || approvedRequest.requestedHours || 0;
+    }
+    
     // Check if hours exceed approved amount
-    if (hours > approvedRequest.hours) {
+    if (hours > approvedHours) {
       return {
         isValid: false,
-        message: `OT hours (${hours}) exceed approved amount (${approvedRequest.hours} hrs) for ${moment(date).format('MMM DD, YYYY')}.`
+        message: `OT hours (${hours}) exceed approved amount (${approvedHours} hrs) for ${moment(date).format('MMM DD, YYYY')}.`
       };
     }
     
@@ -913,14 +1001,38 @@ export const TimesheetsPage = () => {
                               // Check if there's an approved OT request for this date
                               const dateStr = moment(entry.date).format('YYYY-MM-DD');
                               const approvedOT = overtimeRequests.find(req => {
-                                const reqDateStr = moment(req.date).format('YYYY-MM-DD');
+                                // Handle both old format (single date/hours) and new format (dailyHours array)
                                 const reqProjectId = req.projectId?._id || req.projectId;
-                                return reqDateStr === dateStr && 
-                                       reqProjectId === formData.projectId && 
-                                       req.status === 'approved';
+                                
+                                if (req.status !== 'approved') return false;
+                                if (reqProjectId !== formData.projectId) return false;
+                                
+                                // Check if using new format with dailyHours
+                                if (req.dailyHours && Array.isArray(req.dailyHours)) {
+                                  return req.dailyHours.some(dayEntry => {
+                                    const dayDate = moment(dayEntry.date).format('YYYY-MM-DD');
+                                    return dayDate === dateStr;
+                                  });
+                                }
+                                
+                                // Fallback to old format
+                                const reqDateStr = moment(req.date).format('YYYY-MM-DD');
+                                return reqDateStr === dateStr;
                               });
                               
-                              const hasApprovedOT = !!approvedOT;
+                              // Get the approved hours for this date
+                              let approvedHours = 0;
+                              if (approvedOT && approvedOT.dailyHours) {
+                                const dateStr_inner = moment(entry.date).format('YYYY-MM-DD');
+                                const dayEntry = approvedOT.dailyHours.find(day => 
+                                  moment(day.date).format('YYYY-MM-DD') === dateStr_inner
+                                );
+                                approvedHours = dayEntry?.hours || 0;
+                              } else if (approvedOT) {
+                                approvedHours = approvedOT.hours || approvedOT.requestedHours || 0;
+                              }
+                              
+                              const hasApprovedOT = !!approvedOT && approvedHours > 0;
                               const isOTDisabled = isReadOnly(selectedTimesheet) || !hasApprovedOT || isConflictedDate;
                               
                               return !hasApprovedOT && !isReadOnly(selectedTimesheet) && !isConflictedDate ? (
@@ -944,14 +1056,14 @@ export const TimesheetsPage = () => {
                                   </Box>
                                 </Tooltip>
                               ) : (
-                                <Tooltip title={hasApprovedOT ? `Approved: ${approvedOT.hours} hrs` : ''} arrow>
+                                <Tooltip title={hasApprovedOT ? `Approved: ${approvedHours} hrs` : ''} arrow>
                                   <TextField
                                     type="number"
                                     size="small"
                                     fullWidth
                                     value={entry.otHours || ''}
                                     onChange={(e) => handleEntryChange(index, 'otHours', e.target.value)}
-                                    inputProps={{ min: 0, max: approvedOT?.hours || 24, step: 0.5 }}
+                                    inputProps={{ min: 0, max: approvedHours || 24, step: 0.5 }}
                                     disabled={isOTDisabled}
                                   />
                                 </Tooltip>
