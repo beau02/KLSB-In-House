@@ -6,34 +6,50 @@ const Timesheet = require('../models/Timesheet');
 // @access  Private
 exports.createOvertimeRequest = async (req, res) => {
   try {
-    const { projectId, date, requestedHours, reason, workDescription, disciplineCode, area } = req.body;
+    const { projectId, weekStartDate, dailyHours, reason, workDescription, disciplineCode, area } = req.body;
 
-    if (!projectId || !date || !requestedHours || !reason) {
+    if (!projectId || !weekStartDate || !dailyHours || !reason) {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    if (requestedHours <= 0 || requestedHours > 24) {
-      return res.status(400).json({ message: 'Requested hours must be between 0 and 24' });
+    if (!Array.isArray(dailyHours) || dailyHours.length === 0 || dailyHours.length > 7) {
+      return res.status(400).json({ message: 'Daily hours must be an array with 1-7 entries' });
     }
 
-    // Check if request already exists for this user, project, and date
+    // Validate each day's hours
+    for (const day of dailyHours) {
+      if (!day.date || day.hours === undefined) {
+        return res.status(400).json({ message: 'Each day must have a date and hours' });
+      }
+      if (day.hours < 0 || day.hours > 24) {
+        return res.status(400).json({ message: 'Hours must be between 0 and 24 for each day' });
+      }
+    }
+
+    // Calculate week end date
+    const startDate = new Date(weekStartDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+
+    // Check if request already exists for this user, project, and week
     const existingRequest = await OvertimeRequest.findOne({
       userId: req.user.id,
       projectId,
-      date: new Date(date)
+      weekStartDate: { $gte: startDate, $lte: endDate }
     });
 
     if (existingRequest) {
       return res.status(400).json({ 
-        message: 'You already have an overtime request for this project and date' 
+        message: 'You already have an overtime request for this project and week' 
       });
     }
 
     const overtimeRequest = await OvertimeRequest.create({
       userId: req.user.id,
       projectId,
-      date,
-      requestedHours,
+      weekStartDate: startDate,
+      weekEndDate: endDate,
+      dailyHours,
       reason,
       workDescription,
       disciplineCode,
@@ -125,16 +141,36 @@ exports.updateOvertimeRequest = async (req, res) => {
       });
     }
 
-    const { projectId, date, requestedHours, reason, workDescription, disciplineCode, area } = req.body;
+    const { projectId, weekStartDate, dailyHours, reason, workDescription, disciplineCode, area } = req.body;
 
     if (projectId) overtimeRequest.projectId = projectId;
-    if (date) overtimeRequest.date = date;
-    if (requestedHours) {
-      if (requestedHours <= 0 || requestedHours > 24) {
-        return res.status(400).json({ message: 'Requested hours must be between 0 and 24' });
-      }
-      overtimeRequest.requestedHours = requestedHours;
+    
+    if (weekStartDate) {
+      const startDate = new Date(weekStartDate);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      overtimeRequest.weekStartDate = startDate;
+      overtimeRequest.weekEndDate = endDate;
     }
+    
+    if (dailyHours) {
+      if (!Array.isArray(dailyHours) || dailyHours.length === 0 || dailyHours.length > 7) {
+        return res.status(400).json({ message: 'Daily hours must be an array with 1-7 entries' });
+      }
+      
+      // Validate each day's hours
+      for (const day of dailyHours) {
+        if (!day.date || day.hours === undefined) {
+          return res.status(400).json({ message: 'Each day must have a date and hours' });
+        }
+        if (day.hours < 0 || day.hours > 24) {
+          return res.status(400).json({ message: 'Hours must be between 0 and 24 for each day' });
+        }
+      }
+      
+      overtimeRequest.dailyHours = dailyHours;
+    }
+    
     if (reason) overtimeRequest.reason = reason;
     if (workDescription !== undefined) overtimeRequest.workDescription = workDescription;
     if (disciplineCode !== undefined) overtimeRequest.disciplineCode = disciplineCode;
@@ -277,11 +313,16 @@ exports.validateOvertimeHours = async (req, res) => {
       return res.json({ valid: true });
     }
 
+    const entryDate = new Date(date);
+    entryDate.setHours(0, 0, 0, 0);
+
+    // Find approved request that covers this date
     const approvedRequest = await OvertimeRequest.findOne({
       userId: req.user.id,
       projectId,
-      date: new Date(date),
-      status: 'approved'
+      status: 'approved',
+      weekStartDate: { $lte: entryDate },
+      weekEndDate: { $gte: entryDate }
     });
 
     if (!approvedRequest) {
@@ -291,14 +332,28 @@ exports.validateOvertimeHours = async (req, res) => {
       });
     }
 
-    if (hours > approvedRequest.requestedHours) {
+    // Find the specific day in dailyHours
+    const dayEntry = approvedRequest.dailyHours.find(day => {
+      const dayDate = new Date(day.date);
+      dayDate.setHours(0, 0, 0, 0);
+      return dayDate.getTime() === entryDate.getTime();
+    });
+
+    if (!dayEntry) {
       return res.json({
         valid: false,
-        message: `Overtime hours (${hours}) exceed approved request (${approvedRequest.requestedHours} hours)`
+        message: 'No approved overtime hours for this specific date'
       });
     }
 
-    res.json({ valid: true, approvedRequest });
+    if (hours > dayEntry.hours) {
+      return res.json({
+        valid: false,
+        message: `Overtime hours (${hours}) exceed approved request (${dayEntry.hours} hours) for this date`
+      });
+    }
+
+    res.json({ valid: true, approvedRequest, approvedHours: dayEntry.hours });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

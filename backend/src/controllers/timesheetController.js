@@ -406,33 +406,49 @@ exports.updateTimesheet = async (req, res) => {
     }
 
     // Validate OT hours against approved overtime requests
-    if (entries && Array.isArray(entries)) {
+    if (normalizedEntries && Array.isArray(normalizedEntries)) {
       const projectToCheck = projectId || timesheet.projectId;
-      for (const entry of entries) {
-        if (entry.type === 'ot' && entry.hours > 0) {
-          const entryDate = new Date(timesheet.year, timesheet.month - 1, entry.day);
+      for (const entry of normalizedEntries) {
+        if (entry.otHours && entry.otHours > 0) {
+          const entryDate = new Date(entry.date);
+          entryDate.setHours(0, 0, 0, 0);
           
+          // Find approved weekly request that covers this date
           const approvedRequest = await OvertimeRequest.findOne({
             userId: timesheet.userId,
             projectId: projectToCheck,
-            date: entryDate,
-            status: 'approved'
+            status: 'approved',
+            weekStartDate: { $lte: entryDate },
+            weekEndDate: { $gte: entryDate }
           });
 
           if (!approvedRequest) {
             return res.status(400).json({ 
-              message: `No approved overtime request found for day ${entry.day}. Please submit an overtime request first.` 
+              message: `No approved overtime request found for ${entryDate.toLocaleDateString()}. Please submit an overtime request first.` 
             });
           }
 
-          if (entry.hours > approvedRequest.requestedHours) {
+          // Find the specific day in the weekly request
+          const dayEntry = approvedRequest.dailyHours.find(day => {
+            const dayDate = new Date(day.date);
+            dayDate.setHours(0, 0, 0, 0);
+            return dayDate.getTime() === entryDate.getTime();
+          });
+
+          if (!dayEntry) {
             return res.status(400).json({ 
-              message: `Overtime hours for day ${entry.day} (${entry.hours}h) exceed approved request (${approvedRequest.requestedHours}h)` 
+              message: `No approved overtime hours for ${entryDate.toLocaleDateString()}.` 
             });
           }
 
-          // Update actual hours in the overtime request
-          approvedRequest.actualHours = entry.hours;
+          if (entry.otHours > dayEntry.hours) {
+            return res.status(400).json({ 
+              message: `Overtime hours for ${entryDate.toLocaleDateString()} (${entry.otHours}h) exceed approved request (${dayEntry.hours}h)` 
+            });
+          }
+
+          // Update actual hours for this day in the overtime request
+          dayEntry.actualHours = entry.otHours;
           await approvedRequest.save();
         }
       }

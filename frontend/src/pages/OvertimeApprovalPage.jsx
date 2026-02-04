@@ -233,120 +233,129 @@ export const OvertimeApprovalPage = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Employee</TableCell>
-                <TableCell>Date</TableCell>
+                <TableCell>Week Period</TableCell>
                 <TableCell>Project</TableCell>
                 <TableCell>Discipline</TableCell>
                 <TableCell>Area</TableCell>
-                <TableCell align="right">Requested Hours</TableCell>
-                <TableCell align="right">Actual Hours</TableCell>
+                <TableCell align="right">Total Hours</TableCell>
                 <TableCell>Reason</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredRequests.map((request) => (
-                <TableRow key={request._id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar sx={{ mr: 2, bgcolor: '#030C69', width: 36, height: 36 }}>
-                        <Person fontSize="small" />
-                      </Avatar>
+              {filteredRequests.map((request) => {
+                const weekStart = request.weekStartDate ? new Date(request.weekStartDate) : null;
+                const weekEnd = request.weekEndDate ? new Date(request.weekEndDate) : null;
+                const totalHours = request.totalRequestedHours || request.dailyHours?.reduce((sum, dh) => sum + (dh.hours || 0), 0) || request.requestedHours || 0;
+                
+                return (
+                  <TableRow key={request._id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar sx={{ mr: 2, bgcolor: '#030C69', width: 36, height: 36 }}>
+                          <Person fontSize="small" />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {request.userId?.firstName} {request.userId?.lastName}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {request.userId?.department}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {weekStart && weekEnd ? (
+                        <>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {weekStart.toLocaleDateString('en-MY')}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            to {weekEnd.toLocaleDateString('en-MY')}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2">
+                          {request.date ? new Date(request.date).toLocaleDateString('en-MY') : '-'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {request.userId?.firstName} {request.userId?.lastName}
+                          {request.projectId?.projectCode}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          {request.userId?.department}
+                          {request.projectId?.projectName}
                         </Typography>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(request.date).toLocaleDateString('en-MY')}
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {request.projectId?.projectCode}
+                    </TableCell>
+                    <TableCell>
+                      {request.disciplineCode ? (
+                        <Chip label={request.disciplineCode} size="small" color="primary" variant="outlined" />
+                      ) : (
+                        <Typography variant="caption" color="textSecondary">-</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {request.area || '-'}
                       </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {request.projectId?.projectName}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {request.disciplineCode ? (
-                      <Chip label={request.disciplineCode} size="small" color="primary" variant="outlined" />
-                    ) : (
-                      <Typography variant="caption" color="textSecondary">-</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {request.area || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      icon={<AccessTime />}
-                      label={`${request.requestedHours}h`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {request.actualHours ? (
+                    </TableCell>
+                    <TableCell align="right">
                       <Chip
                         icon={<AccessTime />}
-                        label={`${request.actualHours}h`}
+                        label={`${totalHours}h`}
                         size="small"
-                        color="success"
-                      />
-                    ) : (
-                      <Typography variant="caption" color="textSecondary">
-                        Not filled
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ maxWidth: 250 }}>
-                      {request.reason}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={getStatusIcon(request.status)}
-                      label={request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      color={getStatusColor(request.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    {request.status === 'pending' ? (
-                      <Button
-                        size="small"
+                        color="primary"
                         variant="outlined"
-                        onClick={() => handleOpenDialog(request)}
-                      >
-                        Review
-                      </Button>
-                    ) : (
-                      <Button
+                      />
+                      {request.dailyHours && request.dailyHours.length > 0 && (
+                        <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 0.5 }}>
+                          {request.dailyHours.filter(dh => dh.hours > 0).length} days
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 250 }}>
+                        {request.reason}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={getStatusIcon(request.status)}
+                        label={request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        color={getStatusColor(request.status)}
                         size="small"
-                        variant="text"
-                        onClick={() => handleOpenDialog(request)}
-                      >
-                        View
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {request.status === 'pending' ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleOpenDialog(request)}
+                        >
+                          Review
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => handleOpenDialog(request)}
+                        >
+                          View
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {filteredRequests.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Typography color="textSecondary" sx={{ py: 3 }}>
                       No {activeTab === 0 ? 'pending' : activeTab === 1 ? 'approved' : 'rejected'} overtime requests
                     </Typography>
@@ -359,7 +368,7 @@ export const OvertimeApprovalPage = () => {
       </Paper>
 
       {/* Review Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
           Overtime Request Details
         </DialogTitle>
@@ -375,25 +384,86 @@ export const OvertimeApprovalPage = () => {
                     {selectedRequest.userId?.firstName} {selectedRequest.userId?.lastName}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={12}>
                   <Typography variant="subtitle2" color="textSecondary">
-                    Date
+                    {selectedRequest.weekStartDate ? 'Week Period' : 'Date'}
                   </Typography>
-                  <Typography variant="body1">
-                    {new Date(selectedRequest.date).toLocaleDateString('en-MY', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </Typography>
+                  {selectedRequest.weekStartDate && selectedRequest.weekEndDate ? (
+                    <>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {new Date(selectedRequest.weekStartDate).toLocaleDateString('en-MY', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        to {new Date(selectedRequest.weekEndDate).toLocaleDateString('en-MY', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="body1">
+                      {selectedRequest.date && new Date(selectedRequest.date).toLocaleDateString('en-MY', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </Typography>
+                  )}
                 </Grid>
-                <Grid item xs={6}>
+                
+                {/* Daily Hours Breakdown */}
+                {selectedRequest.dailyHours && selectedRequest.dailyHours.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                      Daily Hours Breakdown
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                      {selectedRequest.dailyHours.filter(dh => dh.hours > 0).map((dayHours, idx) => {
+                        const date = new Date(dayHours.date);
+                        return (
+                          <Box key={idx} sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            p: 1.5, 
+                            bgcolor: '#f5f5f5', 
+                            borderRadius: 1 
+                          }}>
+                            <Typography variant="body2">
+                              {date.toLocaleDateString('en-MY', { 
+                                weekday: 'short', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </Typography>
+                            <Chip 
+                              label={`${dayHours.hours}h`} 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                            />
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Grid>
+                )}
+                
+                <Grid item xs={12}>
                   <Typography variant="subtitle2" color="textSecondary">
-                    Requested Hours
+                    Total Requested Hours
                   </Typography>
                   <Typography variant="h6" color="primary">
-                    {selectedRequest.requestedHours} hours
+                    {selectedRequest.totalRequestedHours || 
+                     selectedRequest.dailyHours?.reduce((sum, dh) => sum + (dh.hours || 0), 0) || 
+                     selectedRequest.requestedHours || 0} hours
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>

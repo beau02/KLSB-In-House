@@ -39,6 +39,26 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { overtimeRequestService, projectService } from '../services';
 
+// Helper function to get start of week (Monday)
+const getWeekStart = (date) => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  return new Date(d.setDate(diff));
+};
+
+// Helper function to get week dates
+const getWeekDates = (startDate) => {
+  const dates = [];
+  const start = new Date(startDate);
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    dates.push(date);
+  }
+  return dates;
+};
+
 export const OvertimeRequestPage = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
@@ -47,10 +67,14 @@ export const OvertimeRequestPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [weekStartDate, setWeekStartDate] = useState(() => {
+    const start = getWeekStart(new Date());
+    return start.toISOString().split('T')[0];
+  });
   const [formData, setFormData] = useState({
     projectId: '',
-    date: '',
-    requestedHours: '',
+    weekStartDate: '',
+    dailyHours: [],
     reason: '',
     workDescription: '',
     disciplineCode: '',
@@ -95,19 +119,26 @@ export const OvertimeRequestPage = () => {
       setEditingId(request._id);
       setFormData({
         projectId: request.projectId?._id || '',
-        date: request.date.split('T')[0],
-        requestedHours: request.requestedHours,
+        weekStartDate: request.weekStartDate ? new Date(request.weekStartDate).toISOString().split('T')[0] : '',
+        dailyHours: request.dailyHours || [],
         reason: request.reason || '',
         workDescription: request.workDescription || '',
         disciplineCode: request.disciplineCode || '',
         area: request.area || ''
       });
     } else {
+      const weekStart = getWeekStart(new Date());
+      const weekDates = getWeekDates(weekStart);
+      const defaultDailyHours = weekDates.map(date => ({
+        date: date.toISOString().split('T')[0],
+        hours: 0
+      }));
+      
       setEditingId(null);
       setFormData({
         projectId: '',
-        date: '',
-        requestedHours: '',
+        weekStartDate: weekStart.toISOString().split('T')[0],
+        dailyHours: defaultDailyHours,
         reason: '',
         workDescription: '',
         disciplineCode: '',
@@ -124,8 +155,8 @@ export const OvertimeRequestPage = () => {
     setEditingId(null);
     setFormData({
       projectId: '',
-      date: '',
-      requestedHours: '',
+      weekStartDate: '',
+      dailyHours: [],
       reason: '',
       workDescription: '',
       disciplineCode: '',
@@ -133,24 +164,57 @@ export const OvertimeRequestPage = () => {
     });
   };
 
+  const handleWeekChange = (newWeekStart) => {
+    const weekStart = new Date(newWeekStart);
+    const weekDates = getWeekDates(weekStart);
+    const dailyHours = weekDates.map(date => ({
+      date: date.toISOString().split('T')[0],
+      hours: formData.dailyHours.find(dh => dh.date === date.toISOString().split('T')[0])?.hours || 0
+    }));
+    setFormData({ ...formData, weekStartDate: newWeekStart, dailyHours });
+  };
+
+  const handleHoursChange = (dateStr, hours) => {
+    const updatedDailyHours = formData.dailyHours.map(dh => 
+      dh.date === dateStr ? { ...dh, hours: parseFloat(hours) || 0 } : dh
+    );
+    setFormData({ ...formData, dailyHours: updatedDailyHours });
+  };
+
   const handleSubmit = async () => {
-    if (!formData.projectId || !formData.date || !formData.requestedHours || !formData.reason) {
+    if (!formData.projectId || !formData.weekStartDate || !formData.reason) {
       setError('Please fill in all required fields');
       return;
     }
 
-    if (formData.requestedHours <= 0 || formData.requestedHours > 24) {
-      setError('Requested hours must be between 0 and 24');
+    // Filter out days with 0 hours
+    const validDailyHours = formData.dailyHours.filter(dh => dh.hours > 0);
+
+    if (validDailyHours.length === 0) {
+      setError('Please enter hours for at least one day');
       return;
+    }
+
+    // Validate hours range
+    for (const dh of validDailyHours) {
+      if (dh.hours < 0 || dh.hours > 24) {
+        setError('Hours must be between 0 and 24 for each day');
+        return;
+      }
     }
 
     try {
       setLoading(true);
+      const submitData = {
+        ...formData,
+        dailyHours: validDailyHours
+      };
+      
       if (editingId) {
-        await overtimeRequestService.update(editingId, formData);
+        await overtimeRequestService.update(editingId, submitData);
         setSuccess('Overtime request updated successfully');
       } else {
-        await overtimeRequestService.create(formData);
+        await overtimeRequestService.create(submitData);
         setSuccess('Overtime request submitted successfully');
       }
       handleCloseDialog();
@@ -299,106 +363,115 @@ export const OvertimeRequestPage = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Date</TableCell>
+                <TableCell>Week Period</TableCell>
                 <TableCell>Project</TableCell>
                 <TableCell>Discipline</TableCell>
                 <TableCell>Area</TableCell>
-                <TableCell align="right">Requested Hours</TableCell>
-                <TableCell align="right">Actual Hours</TableCell>
+                <TableCell align="right">Total Hours</TableCell>
                 <TableCell>Reason</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {requests.map((request) => (
-                <TableRow key={request._id}>
-                  <TableCell>
-                    {new Date(request.date).toLocaleDateString('en-MY')}
-                  </TableCell>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {request.projectId?.projectCode}
+              {requests.map((request) => {
+                const weekStart = request.weekStartDate ? new Date(request.weekStartDate) : null;
+                const weekEnd = request.weekEndDate ? new Date(request.weekEndDate) : null;
+                const totalHours = request.totalRequestedHours || request.dailyHours?.reduce((sum, dh) => sum + (dh.hours || 0), 0) || 0;
+                
+                return (
+                  <TableRow key={request._id}>
+                    <TableCell>
+                      {weekStart && weekEnd ? (
+                        <>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {weekStart.toLocaleDateString('en-MY')}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            to {weekEnd.toLocaleDateString('en-MY')}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="body2">
+                          {request.date ? new Date(request.date).toLocaleDateString('en-MY') : '-'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {request.projectId?.projectCode}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {request.projectId?.projectName}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {request.disciplineCode ? (
+                        <Chip label={request.disciplineCode} size="small" color="primary" variant="outlined" />
+                      ) : (
+                        <Typography variant="caption" color="textSecondary">-</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {request.area || '-'}
                       </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {request.projectId?.projectName}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {request.disciplineCode ? (
-                      <Chip label={request.disciplineCode} size="small" color="primary" variant="outlined" />
-                    ) : (
-                      <Typography variant="caption" color="textSecondary">-</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {request.area || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      icon={<AccessTime />}
-                      label={`${request.requestedHours}h`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {request.actualHours ? (
+                    </TableCell>
+                    <TableCell align="right">
                       <Chip
                         icon={<AccessTime />}
-                        label={`${request.actualHours}h`}
+                        label={`${totalHours}h`}
                         size="small"
-                        color="success"
+                        color="primary"
+                        variant="outlined"
                       />
-                    ) : (
-                      <Typography variant="caption" color="textSecondary">
-                        Not filled
+                      {request.dailyHours && request.dailyHours.length > 0 && (
+                        <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 0.5 }}>
+                          {request.dailyHours.filter(dh => dh.hours > 0).length} days
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 200 }}>
+                        {request.reason}
                       </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ maxWidth: 200 }}>
-                      {request.reason}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={getStatusIcon(request.status)}
-                      label={request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      color={getStatusColor(request.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    {request.status === 'pending' && (
-                      <>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDialog(request)}
-                          color="primary"
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(request._id)}
-                          color="error"
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={getStatusIcon(request.status)}
+                        label={request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        color={getStatusColor(request.status)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {request.status === 'pending' && (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenDialog(request)}
+                            color="primary"
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(request._id)}
+                            color="error"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {requests.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Typography color="textSecondary" sx={{ py: 3 }}>
                       No overtime requests yet. Click "New Overtime Request" to create one.
                     </Typography>
@@ -411,9 +484,9 @@ export const OvertimeRequestPage = () => {
       </Paper>
 
       {/* Request Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingId ? 'Edit Overtime Request' : 'New Overtime Request'}
+          {editingId ? 'Edit Weekly Overtime Request' : 'New Weekly Overtime Request'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -436,25 +509,68 @@ export const OvertimeRequestPage = () => {
             </FormControl>
 
             <TextField
-              label="Date"
+              label="Week Starting (Monday)"
               type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              value={formData.weekStartDate}
+              onChange={(e) => handleWeekChange(e.target.value)}
               InputLabelProps={{ shrink: true }}
               required
               fullWidth
+              helperText="Select the Monday of the week you want to request overtime"
             />
 
-            <TextField
-              label="Requested Hours"
-              type="number"
-              value={formData.requestedHours}
-              onChange={(e) => setFormData({ ...formData, requestedHours: e.target.value })}
-              inputProps={{ min: 0, max: 24, step: 0.5 }}
-              required
-              fullWidth
-              helperText="Enter the overtime hours you plan to work"
-            />
+            {/* Daily Hours Input */}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Overtime Hours per Day
+              </Typography>
+              <Typography variant="caption" color="textSecondary" gutterBottom display="block">
+                Enter the overtime hours you plan to work each day of the week
+              </Typography>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                {formData.dailyHours.map((dayHours, index) => {
+                  const date = new Date(dayHours.date);
+                  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                  const dayName = dayNames[date.getDay()];
+                  
+                  return (
+                    <Grid item xs={12} sm={6} md={4} key={dayHours.date}>
+                      <Box sx={{ 
+                        p: 2, 
+                        border: '1px solid #e0e0e0', 
+                        borderRadius: 1,
+                        backgroundColor: dayHours.hours > 0 ? '#f0f7ff' : '#fff'
+                      }}>
+                        <Typography variant="caption" color="textSecondary">
+                          {dayName}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          {date.toLocaleDateString('en-MY', { month: 'short', day: 'numeric' })}
+                        </Typography>
+                        <TextField
+                          type="number"
+                          value={dayHours.hours}
+                          onChange={(e) => handleHoursChange(dayHours.date, e.target.value)}
+                          inputProps={{ min: 0, max: 24, step: 0.5 }}
+                          size="small"
+                          fullWidth
+                          label="Hours"
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              fontSize: '1.1rem',
+                              fontWeight: 600
+                            }
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+              <Typography variant="body2" sx={{ mt: 2, fontWeight: 600 }}>
+                Total Week Hours: {formData.dailyHours.reduce((sum, dh) => sum + (dh.hours || 0), 0).toFixed(1)}h
+              </Typography>
+            </Box>
 
             <FormControl fullWidth>
               <InputLabel>Discipline Code</InputLabel>
@@ -506,7 +622,7 @@ export const OvertimeRequestPage = () => {
               rows={2}
               required
               fullWidth
-              helperText="Explain why you need to work overtime"
+              helperText="Explain why you need to work overtime this week"
             />
 
             <TextField
