@@ -537,9 +537,14 @@ export const OvertimeRequestPage = () => {
                     <Grid item xs={12} sm={6} md={4} key={dayHours.date}>
                       <Box sx={{ 
                         p: 2, 
-                        border: '1px solid #e0e0e0', 
+                        border: (theme) => theme.palette.mode === 'dark' ? '1px solid #475569' : '1px solid #e0e0e0',
                         borderRadius: 1,
-                        backgroundColor: dayHours.hours > 0 ? '#f0f7ff' : '#fff'
+                        backgroundColor: (theme) => {
+                          if (dayHours.hours > 0) {
+                            return theme.palette.mode === 'dark' ? '#1e3a8a' : '#f0f7ff';
+                          }
+                          return theme.palette.mode === 'dark' ? '#0f172a' : '#fff';
+                        }
                       }}>
                         <Typography variant="caption" color="textSecondary">
                           {dayName}

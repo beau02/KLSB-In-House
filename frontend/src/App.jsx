@@ -124,9 +124,10 @@ const darkTheme = createTheme({
       paper: '#1e293b',
     },
     text: {
-      primary: '#e5e7eb',
-      secondary: '#9ca3af',
+      primary: '#f1f5f9',
+      secondary: '#cbd5e1',
     },
+    divider: '#475569',
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -190,12 +191,13 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           borderBottom: '1px solid #334155',
+          color: '#f1f5f9',
         },
         head: {
           backgroundColor: '#0f172a',
           fontWeight: 600,
-          color: '#e5e7eb',
-          borderBottom: '2px solid #334155',
+          color: '#f1f5f9',
+          borderBottom: '2px solid #475569',
         },
       },
     },
@@ -203,7 +205,11 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: '#334155',
-          color: '#e5e7eb',
+          color: '#f1f5f9',
+          borderColor: '#475569',
+        },
+        outlined: {
+          borderColor: '#475569',
         },
       },
     },
@@ -212,20 +218,149 @@ const darkTheme = createTheme({
         paper: {
           backgroundImage: 'none',
           backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
         },
       },
     },
     MuiTextField: {
       styleOverrides: {
         root: {
+          '& .MuiInputLabel-root': {
+            color: '#cbd5e1',
+          },
+          '& .MuiInputLabel-root.Mui-focused': {
+            color: '#6366f1',
+          },
           '& .MuiOutlinedInput-root': {
+            backgroundColor: '#0f172a',
+            color: '#f1f5f9',
             '& fieldset': {
-              borderColor: '#334155',
-            },
-            '&:hover fieldset': {
               borderColor: '#475569',
             },
+            '&:hover fieldset': {
+              borderColor: '#64748b',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#6366f1',
+            },
           },
+          '& .MuiInputBase-input': {
+            color: '#f1f5f9',
+          },
+          '& .MuiFormHelperText-root': {
+            color: '#94a3b8',
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#0f172a',
+          color: '#f1f5f9',
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#475569',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#64748b',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#6366f1',
+          },
+        },
+        icon: {
+          color: '#cbd5e1',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
+          '&:hover': {
+            backgroundColor: '#334155',
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#475569',
+            '&:hover': {
+              backgroundColor: '#475569',
+            },
+          },
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          color: '#cbd5e1',
+          '&.Mui-focused': {
+            color: '#6366f1',
+          },
+        },
+      },
+    },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: {
+          color: '#cbd5e1',
+          '&.Mui-focused': {
+            color: '#6366f1',
+          },
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
+        },
+        body2: {
+          color: '#cbd5e1',
+        },
+        caption: {
+          color: '#94a3b8',
+        },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
+        },
+        standardError: {
+          backgroundColor: '#7f1d1d',
+          color: '#fecaca',
+          borderColor: '#991b1b',
+        },
+        standardWarning: {
+          backgroundColor: '#78350f',
+          color: '#fed7aa',
+          borderColor: '#92400e',
+        },
+        standardInfo: {
+          backgroundColor: '#1e3a8a',
+          color: '#bfdbfe',
+          borderColor: '#1e40af',
+        },
+        standardSuccess: {
+          backgroundColor: '#14532d',
+          color: '#bbf7d0',
+          borderColor: '#166534',
         },
       },
     },
