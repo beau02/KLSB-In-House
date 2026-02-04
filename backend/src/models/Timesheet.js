@@ -145,6 +145,25 @@ timesheetSchema.pre('save', function(next) {
   next();
 });
 
+// Calculate total hours before findOneAndUpdate
+timesheetSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+  
+  // Check if entries are being updated
+  if (update.$set && update.$set.entries) {
+    const entries = update.$set.entries;
+    const totalNormalHours = entries.reduce((sum, entry) => sum + (entry.normalHours || 0), 0);
+    const totalOTHours = entries.reduce((sum, entry) => sum + (entry.otHours || 0), 0);
+    const totalHours = totalNormalHours + totalOTHours;
+    
+    update.$set.totalNormalHours = totalNormalHours;
+    update.$set.totalOTHours = totalOTHours;
+    update.$set.totalHours = totalHours;
+  }
+  
+  next();
+});
+
 // Unique index for one timesheet per user/project/month/year
 timesheetSchema.index({ userId: 1, projectId: 1, month: 1, year: 1 }, { unique: true });
 timesheetSchema.index({ status: 1 });

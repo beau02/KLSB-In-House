@@ -459,6 +459,14 @@ exports.updateTimesheet = async (req, res) => {
     if (normalizedEntries) {
       console.log('✓ Will update entries');
       updateData.entries = normalizedEntries;
+      
+      // Calculate total hours when entries are updated
+      const totalNormalHours = normalizedEntries.reduce((sum, entry) => sum + (entry.normalHours || 0), 0);
+      const totalOTHours = normalizedEntries.reduce((sum, entry) => sum + (entry.otHours || 0), 0);
+      updateData.totalNormalHours = totalNormalHours;
+      updateData.totalOTHours = totalOTHours;
+      updateData.totalHours = totalNormalHours + totalOTHours;
+      console.log(`✓ Calculated totals: Normal=${totalNormalHours}, OT=${totalOTHours}, Total=${updateData.totalHours}`);
     }
     
     if (projectId !== undefined) {
