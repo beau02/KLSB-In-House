@@ -453,7 +453,7 @@ export const ApprovalsPage = () => {
                   <TableContainer sx={{ maxHeight: 500 }}>
                     <Table size="small" stickyHeader>
                       <TableHead>
-                        <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0f172a' : undefined }}>
+                        <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : undefined }}>
                           <TableCell width="60px"><strong>Date</strong></TableCell>
                           <TableCell width="60px"><strong>Day</strong></TableCell>
                           <TableCell width="160px"><strong>Discipline Code</strong></TableCell>

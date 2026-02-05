@@ -270,10 +270,16 @@ export const StaffManagementPage = () => {
       <Chip
         label={status.toUpperCase()}
         sx={{
-          backgroundColor: status === 'active' ? '#e8f5e9' : '#fafafa',
-          color: status === 'active' ? '#2e7d32' : '#757575',
+          backgroundColor: status === 'active' 
+            ? (theme) => theme.palette.mode === 'dark' ? 'rgba(74, 222, 128, 0.15)' : '#e8f5e9' 
+            : (theme) => theme.palette.mode === 'dark' ? 'rgba(156, 163, 175, 0.15)' : '#fafafa',
+          color: status === 'active' 
+            ? (theme) => theme.palette.mode === 'dark' ? '#86efac' : '#2e7d32' 
+            : (theme) => theme.palette.mode === 'dark' ? '#d1d5db' : '#757575',
           fontWeight: 600,
-          border: status === 'active' ? '1px solid #2e7d3230' : '1px solid #75757530'
+          border: status === 'active' 
+            ? (theme) => theme.palette.mode === 'dark' ? '1px solid #86efac30' : '1px solid #2e7d3230' 
+            : (theme) => theme.palette.mode === 'dark' ? '1px solid #d1d5db30' : '1px solid #75757530'
         }}
         size="small"
       />
@@ -285,20 +291,26 @@ export const StaffManagementPage = () => {
       admin: { 
         color: 'error', 
         icon: <AdminPanelSettings sx={{ fontSize: 16 }} />,
-        bg: '#fff5f5',
-        textColor: '#d32f2f'
+        lightBg: '#fff5f5',
+        darkBg: 'rgba(239, 68, 68, 0.15)',
+        lightColor: '#d32f2f',
+        darkColor: '#fca5a5'
       },
       manager: { 
         color: 'warning', 
         icon: <ManageAccounts sx={{ fontSize: 16 }} />,
-        bg: '#fff8e1',
-        textColor: '#f57c00'
+        lightBg: '#fff8e1',
+        darkBg: 'rgba(245, 158, 11, 0.15)',
+        lightColor: '#f57c00',
+        darkColor: '#fdba74'
       },
       employee: { 
         color: 'primary', 
         icon: <Person sx={{ fontSize: 16 }} />,
-        bg: '#e3f2fd',
-        textColor: '#1976d2'
+        lightBg: '#e3f2fd',
+        darkBg: 'rgba(99, 102, 241, 0.15)',
+        lightColor: '#1976d2',
+        darkColor: '#818cf8'
       }
     };
     
@@ -309,12 +321,12 @@ export const StaffManagementPage = () => {
         icon={config.icon}
         label={role.toUpperCase()} 
         sx={{
-          backgroundColor: config.bg,
-          color: config.textColor,
+          backgroundColor: (theme) => theme.palette.mode === 'dark' ? config.darkBg : config.lightBg,
+          color: (theme) => theme.palette.mode === 'dark' ? config.darkColor : config.lightColor,
           fontWeight: 600,
-          border: `1px solid ${config.textColor}30`,
+          border: (theme) => `1px solid ${theme.palette.mode === 'dark' ? config.darkColor : config.lightColor}30`,
           '& .MuiChip-icon': {
-            color: config.textColor
+            color: (theme) => theme.palette.mode === 'dark' ? config.darkColor : config.lightColor
           }
         }}
         size="small" 
@@ -882,19 +894,19 @@ export const StaffManagementPage = () => {
                 >
                   <MenuItem value="employee">
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Person sx={{ fontSize: 18, color: '#1976d2' }} />
+                      <Person sx={{ fontSize: 18, color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#1976d2' }} />
                       <span>Employee</span>
                     </Stack>
                   </MenuItem>
                   <MenuItem value="manager">
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <ManageAccounts sx={{ fontSize: 18, color: '#f57c00' }} />
+                      <ManageAccounts sx={{ fontSize: 18, color: (theme) => theme.palette.mode === 'dark' ? '#fdba74' : '#f57c00' }} />
                       <span>Manager</span>
                     </Stack>
                   </MenuItem>
                   <MenuItem value="admin">
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <AdminPanelSettings sx={{ fontSize: 18, color: '#d32f2f' }} />
+                      <AdminPanelSettings sx={{ fontSize: 18, color: (theme) => theme.palette.mode === 'dark' ? '#fca5a5' : '#d32f2f' }} />
                       <span>Admin</span>
                     </Stack>
                   </MenuItem>

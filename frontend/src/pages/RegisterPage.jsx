@@ -70,7 +70,9 @@ export const RegisterPage = () => {
       <Box
         sx={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
+          background: (theme) => theme.palette.mode === 'dark' 
+            ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+            : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -96,7 +98,9 @@ export const RegisterPage = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
+        background: (theme) => theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+          : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -109,8 +113,11 @@ export const RegisterPage = () => {
           sx={{ 
             p: { xs: 2, sm: 5 }, 
             borderRadius: 4,
-            background: 'rgba(255,255,255,0.98)',
+            background: (theme) => theme.palette.mode === 'dark' 
+              ? 'rgba(30, 41, 59, 0.95)' 
+              : 'rgba(255,255,255,0.98)',
             backdropFilter: 'blur(10px)',
+            border: (theme) => theme.palette.mode === 'dark' ? '1px solid #334155' : 'none',
           }}
         >
           <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
@@ -118,7 +125,7 @@ export const RegisterPage = () => {
               variant="h3" 
               sx={{ 
                 fontWeight: 800, 
-                color: '#030C69',
+                color: (theme) => theme.palette.mode === 'dark' ? '#f1f5f9' : '#030C69',
                 mb: 1,
                 letterSpacing: '-1px',
                 fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' }
@@ -259,9 +266,13 @@ export const RegisterPage = () => {
                 py: 1.5,
                 fontSize: '1.1rem',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                background: (theme) => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
+                  : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                  background: (theme) => theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)'
+                    : 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
                 },
               }}
             >
@@ -275,7 +286,7 @@ export const RegisterPage = () => {
                 onClick={() => navigate('/login')}
                 type="button"
                 sx={{ 
-                  color: '#030C69',
+                  color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#030C69',
                   fontWeight: 500,
                   textDecoration: 'none',
                   '&:hover': {

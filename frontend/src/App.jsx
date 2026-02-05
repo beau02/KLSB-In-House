@@ -226,6 +226,29 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           color: '#f1f5f9',
+          backgroundColor: '#1e293b',
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
+          backgroundColor: '#1e293b',
+          '& .MuiTypography-root': {
+            color: '#f1f5f9',
+          },
+          '& .MuiTypography-subtitle2': {
+            color: '#cbd5e1',
+          },
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#1e293b',
+          borderTop: '1px solid #334155',
         },
       },
     },
@@ -361,6 +384,27 @@ const darkTheme = createTheme({
           backgroundColor: '#14532d',
           color: '#bbf7d0',
           borderColor: '#166534',
+        },
+      },
+    },
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
+        },
+      },
+    },
+    MuiBox: {
+      styleOverrides: {
+        root: {
+          color: 'inherit',
+        },
+      },
+    },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          color: '#f1f5f9',
         },
       },
     },

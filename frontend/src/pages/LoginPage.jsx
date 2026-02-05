@@ -59,7 +59,9 @@ export const LoginPage = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
+        background: (theme) => theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+          : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 50%, #4CAF50 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -72,8 +74,11 @@ export const LoginPage = () => {
           sx={{ 
             p: { xs: 2, sm: 5 }, 
             borderRadius: 4,
-            background: 'rgba(255,255,255,0.98)',
+            background: (theme) => theme.palette.mode === 'dark' 
+              ? 'rgba(30, 41, 59, 0.95)' 
+              : 'rgba(255,255,255,0.98)',
             backdropFilter: 'blur(10px)',
+            border: (theme) => theme.palette.mode === 'dark' ? '1px solid #334155' : 'none',
           }}
         >
           <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
@@ -87,7 +92,7 @@ export const LoginPage = () => {
             <Typography 
               variant="h6" 
               sx={{ 
-                color: '#546e7a',
+                color: (theme) => theme.palette.mode === 'dark' ? '#cbd5e1' : '#546e7a',
                 fontWeight: 500,
                 fontSize: { xs: '1rem', sm: '1.25rem' }
               }}
@@ -153,9 +158,13 @@ export const LoginPage = () => {
                 py: 1.5,
                 fontSize: '1.1rem',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
+                background: (theme) => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
+                  : 'linear-gradient(135deg, #030C69 0%, #1a2d9e 100%)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
+                  background: (theme) => theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)'
+                    : 'linear-gradient(135deg, #020850 0%, #030C69 100%)',
                 },
               }}
             >
@@ -169,7 +178,7 @@ export const LoginPage = () => {
                 onClick={() => navigate('/register')}
                 type="button"
                 sx={{ 
-                  color: '#030C69',
+                  color: (theme) => theme.palette.mode === 'dark' ? '#818cf8' : '#030C69',
                   fontWeight: 500,
                   textDecoration: 'none',
                   '&:hover': {

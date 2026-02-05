@@ -904,7 +904,7 @@ export const TimesheetsPage = () => {
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 {entryDate.format('DD')}
                                 {isConflictedDate && (
-                                  <Block sx={{ fontSize: 18, color: '#666' }} title="Daily limit exceeded (8hrs max)" />
+                                  <Block sx={{ fontSize: 18, color: (theme) => theme.palette.mode === 'dark' ? '#d1d5db' : '#666' }} title="Daily limit exceeded (8hrs max)" />
                                 )}
                               </Box>
                             </TableCell>

@@ -433,7 +433,7 @@ export const OvertimeApprovalPage = () => {
                             display: 'flex', 
                             justifyContent: 'space-between', 
                             p: 1.5, 
-                            bgcolor: '#f5f5f5', 
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#334155' : '#f5f5f5',
                             borderRadius: 1 
                           }}>
                             <Typography variant="body2">
