@@ -7,7 +7,9 @@ const {
   deleteOvertimeRequest,
   approveOvertimeRequest,
   rejectOvertimeRequest,
-  validateOvertimeHours
+  validateOvertimeHours,
+  getMyOvertimeSummary,
+  getMyReplacementLeaveHistory
 } = require('../controllers/overtimeRequestController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -21,6 +23,8 @@ router.post('/validate', validateOvertimeHours);
 
 // My requests route (must be before /:id)
 router.get('/my-requests', getMyOvertimeRequests);
+router.get('/my-summary', getMyOvertimeSummary);
+router.get('/my-leave-history', getMyReplacementLeaveHistory);
 
 // Admin/Manager routes
 router.get('/', authorize('admin', 'manager'), getAllOvertimeRequests);

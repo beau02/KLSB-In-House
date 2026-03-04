@@ -28,6 +28,7 @@ import {
   ExitToApp,
   AccessTime,
   CheckCircle,
+  EventAvailable,
   Brightness4,
   Brightness7
 } from '@mui/icons-material';
@@ -65,6 +66,7 @@ export const Layout = ({ children }) => {
     { text: 'My Timesheets', icon: <Assignment />, path: '/timesheets' },
     { text: 'Projects', icon: <Work />, path: '/projects' },
     { text: 'Overtime Request', icon: <AccessTime />, path: '/overtime-requests' },
+    { text: 'Replacement Leave', icon: <EventAvailable />, path: '/replacement-leave' },
   ];
 
   // Only show staff management to admins

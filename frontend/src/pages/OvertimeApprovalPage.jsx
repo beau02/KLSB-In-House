@@ -23,7 +23,11 @@ import {
   CardContent,
   Tabs,
   Tab,
-  Avatar
+  Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   CheckCircle,
@@ -46,6 +50,7 @@ export const OvertimeApprovalPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [approvalCompensationType, setApprovalCompensationType] = useState('ot_payment');
 
   useEffect(() => {
     fetchRequests();
@@ -66,6 +71,7 @@ export const OvertimeApprovalPage = () => {
   const handleOpenDialog = (request) => {
     setSelectedRequest(request);
     setRejectionReason('');
+    setApprovalCompensationType(request?.compensationType || 'ot_payment');
     setDialogOpen(true);
     setError('');
   };
@@ -74,12 +80,15 @@ export const OvertimeApprovalPage = () => {
     setDialogOpen(false);
     setSelectedRequest(null);
     setRejectionReason('');
+    setApprovalCompensationType('ot_payment');
   };
 
   const handleApprove = async () => {
     try {
       setLoading(true);
-      await overtimeRequestService.approve(selectedRequest._id);
+      await overtimeRequestService.approve(selectedRequest._id, {
+        compensationType: approvalCompensationType
+      });
       setSuccess('Overtime request approved successfully');
       handleCloseDialog();
       fetchRequests();
@@ -131,6 +140,11 @@ export const OvertimeApprovalPage = () => {
       default:
         return <Pending fontSize="small" />;
     }
+  };
+
+  const getCompensationLabel = (type) => {
+    if (type === 'replacement_leave') return 'Replacement Leave';
+    return 'OT Payment';
   };
 
   const filteredRequests = requests.filter(request => {
@@ -238,6 +252,7 @@ export const OvertimeApprovalPage = () => {
                 <TableCell>Discipline</TableCell>
                 <TableCell>Area</TableCell>
                 <TableCell align="right">Total Hours</TableCell>
+                <TableCell>Outcome</TableCell>
                 <TableCell>Reason</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="center">Actions</TableCell>
@@ -319,6 +334,14 @@ export const OvertimeApprovalPage = () => {
                       )}
                     </TableCell>
                     <TableCell>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        color={(request.approvedCompensationType || request.compensationType) === 'replacement_leave' ? 'secondary' : 'primary'}
+                        label={getCompensationLabel(request.approvedCompensationType || request.compensationType)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2" sx={{ maxWidth: 250 }}>
                         {request.reason}
                       </Typography>
@@ -355,7 +378,7 @@ export const OvertimeApprovalPage = () => {
               })}
               {filteredRequests.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={10} align="center">
                     <Typography color="textSecondary" sx={{ py: 3 }}>
                       No {activeTab === 0 ? 'pending' : activeTab === 1 ? 'approved' : 'rejected'} overtime requests
                     </Typography>
@@ -466,6 +489,51 @@ export const OvertimeApprovalPage = () => {
                      selectedRequest.requestedHours || 0} hours
                   </Typography>
                 </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Requested Outcome
+                  </Typography>
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    color={selectedRequest.compensationType === 'replacement_leave' ? 'secondary' : 'primary'}
+                    label={getCompensationLabel(selectedRequest.compensationType)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  {selectedRequest.status === 'pending' ? (
+                    <FormControl fullWidth>
+                      <InputLabel>Approval Outcome</InputLabel>
+                      <Select
+                        label="Approval Outcome"
+                        value={approvalCompensationType}
+                        onChange={(e) => setApprovalCompensationType(e.target.value)}
+                      >
+                        <MenuItem value="ot_payment">OT Payment (claimable in timesheet)</MenuItem>
+                        <MenuItem value="replacement_leave">Replacement Leave (4h = 0.5 day, 8h = 1 day)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <>
+                      <Typography variant="subtitle2" color="textSecondary">
+                        Approved Outcome
+                      </Typography>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        color={(selectedRequest.approvedCompensationType || selectedRequest.compensationType) === 'replacement_leave' ? 'secondary' : 'primary'}
+                        label={getCompensationLabel(selectedRequest.approvedCompensationType || selectedRequest.compensationType)}
+                      />
+                    </>
+                  )}
+                </Grid>
+                {selectedRequest.status === 'approved' && (selectedRequest.leaveCreditHours || 0) > 0 && (
+                  <Grid item xs={12}>
+                    <Alert severity="success">
+                      Leave credited: {selectedRequest.leaveCreditHours} hour(s) ({selectedRequest.leaveCreditDays} day(s))
+                    </Alert>
+                  </Grid>
+                )}
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="textSecondary">
                     Project

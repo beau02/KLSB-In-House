@@ -36,7 +36,6 @@ import {
   Cancel,
   Pending
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
 import { overtimeRequestService, projectService } from '../services';
 
 // Helper function to get start of week (Monday)
@@ -60,7 +59,6 @@ const getWeekDates = (startDate) => {
 };
 
 export const OvertimeRequestPage = () => {
-  const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -78,7 +76,8 @@ export const OvertimeRequestPage = () => {
     reason: '',
     workDescription: '',
     disciplineCode: '',
-    area: ''
+    area: '',
+    compensationType: 'ot_payment'
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -86,6 +85,11 @@ export const OvertimeRequestPage = () => {
     fetchRequests();
     fetchProjects();
   }, []);
+
+  const getCompensationLabel = (type) => {
+    if (type === 'replacement_leave') return 'Replacement Leave';
+    return 'OT Payment';
+  };
 
   const selectedProject = projects.find((project) => project._id === formData.projectId);
   const projectAreaOptions = selectedProject?.areas || [];
@@ -124,7 +128,8 @@ export const OvertimeRequestPage = () => {
         reason: request.reason || '',
         workDescription: request.workDescription || '',
         disciplineCode: request.disciplineCode || '',
-        area: request.area || ''
+        area: request.area || '',
+        compensationType: request.compensationType || 'ot_payment'
       });
     } else {
       const weekStart = getWeekStart(new Date());
@@ -142,7 +147,8 @@ export const OvertimeRequestPage = () => {
         reason: '',
         workDescription: '',
         disciplineCode: '',
-        area: ''
+        area: '',
+        compensationType: 'ot_payment'
       });
     }
     setDialogOpen(true);
@@ -160,7 +166,8 @@ export const OvertimeRequestPage = () => {
       reason: '',
       workDescription: '',
       disciplineCode: '',
-      area: ''
+      area: '',
+      compensationType: 'ot_payment'
     });
   };
 
@@ -368,6 +375,7 @@ export const OvertimeRequestPage = () => {
                 <TableCell>Discipline</TableCell>
                 <TableCell>Area</TableCell>
                 <TableCell align="right">Total Hours</TableCell>
+                <TableCell>Outcome</TableCell>
                 <TableCell>Reason</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="center">Actions</TableCell>
@@ -434,6 +442,14 @@ export const OvertimeRequestPage = () => {
                       )}
                     </TableCell>
                     <TableCell>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        color={request.compensationType === 'replacement_leave' ? 'secondary' : 'primary'}
+                        label={getCompensationLabel(request.approvedCompensationType || request.compensationType)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2" sx={{ maxWidth: 200 }}>
                         {request.reason}
                       </Typography>
@@ -471,7 +487,7 @@ export const OvertimeRequestPage = () => {
               })}
               {requests.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={9} align="center">
                     <Typography color="textSecondary" sx={{ py: 3 }}>
                       No overtime requests yet. Click "New Overtime Request" to create one.
                     </Typography>
@@ -518,6 +534,18 @@ export const OvertimeRequestPage = () => {
               fullWidth
               helperText="Select the Monday of the week you want to request overtime"
             />
+
+            <FormControl fullWidth required>
+              <InputLabel>Compensation Type</InputLabel>
+              <Select
+                value={formData.compensationType}
+                label="Compensation Type"
+                onChange={(e) => setFormData({ ...formData, compensationType: e.target.value })}
+              >
+                <MenuItem value="ot_payment">OT Payment (claimable in timesheet)</MenuItem>
+                <MenuItem value="replacement_leave">Replacement Leave (4h = 0.5 day, 8h = 1 day)</MenuItem>
+              </Select>
+            </FormControl>
 
             {/* Daily Hours Input */}
             <Box sx={{ mt: 2 }}>

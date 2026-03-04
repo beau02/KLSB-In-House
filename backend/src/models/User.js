@@ -62,6 +62,16 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0
+  },
+  replacementLeaveBalanceHours: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  replacementLeaveBalanceDays: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true

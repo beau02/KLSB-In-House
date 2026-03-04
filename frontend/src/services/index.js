@@ -270,6 +270,16 @@ export const statsService = {
 };
 
 export const overtimeRequestService = {
+  getMySummary: async () => {
+    const response = await api.get('/overtime-requests/my-summary');
+    return response.data;
+  },
+
+  getMyLeaveHistory: async (params = {}) => {
+    const response = await api.get('/overtime-requests/my-leave-history', { params });
+    return response.data;
+  },
+
   getMyRequests: async () => {
     const response = await api.get('/overtime-requests/my-requests');
     return response.data;
@@ -295,8 +305,8 @@ export const overtimeRequestService = {
     return response.data;
   },
 
-  approve: async (id) => {
-    const response = await api.put(`/overtime-requests/${id}/approve`);
+  approve: async (id, payload = {}) => {
+    const response = await api.put(`/overtime-requests/${id}/approve`, payload);
     return response.data;
   },
 

@@ -1,15 +1,37 @@
 const OvertimeRequest = require('../models/OvertimeRequest');
 const Timesheet = require('../models/Timesheet');
+const User = require('../models/User');
+const LeaveTransaction = require('../models/LeaveTransaction');
+const OvertimeSettlement = require('../models/OvertimeSettlement');
+
+const COMPENSATION_TYPES = ['ot_payment', 'replacement_leave'];
+
+const calculateApprovedHours = (dailyHours = []) => {
+  return dailyHours.reduce((sum, day) => sum + (day.hours || 0), 0);
+};
 
 // @desc    Create overtime request
 // @route   POST /api/overtime-requests
 // @access  Private
 exports.createOvertimeRequest = async (req, res) => {
   try {
-    const { projectId, weekStartDate, dailyHours, reason, workDescription, disciplineCode, area } = req.body;
+    const {
+      projectId,
+      weekStartDate,
+      dailyHours,
+      reason,
+      workDescription,
+      disciplineCode,
+      area,
+      compensationType
+    } = req.body;
 
     if (!projectId || !weekStartDate || !dailyHours || !reason) {
       return res.status(400).json({ message: 'Please provide all required fields' });
+    }
+
+    if (compensationType && !COMPENSATION_TYPES.includes(compensationType)) {
+      return res.status(400).json({ message: 'Invalid compensation type' });
     }
 
     if (!Array.isArray(dailyHours) || dailyHours.length === 0 || dailyHours.length > 7) {
@@ -53,7 +75,8 @@ exports.createOvertimeRequest = async (req, res) => {
       reason,
       workDescription,
       disciplineCode,
-      area
+      area,
+      compensationType: compensationType || 'ot_payment'
     });
 
     const populatedRequest = await OvertimeRequest.findById(overtimeRequest._id)
@@ -141,7 +164,16 @@ exports.updateOvertimeRequest = async (req, res) => {
       });
     }
 
-    const { projectId, weekStartDate, dailyHours, reason, workDescription, disciplineCode, area } = req.body;
+    const {
+      projectId,
+      weekStartDate,
+      dailyHours,
+      reason,
+      workDescription,
+      disciplineCode,
+      area,
+      compensationType
+    } = req.body;
 
     if (projectId) overtimeRequest.projectId = projectId;
     
@@ -175,6 +207,12 @@ exports.updateOvertimeRequest = async (req, res) => {
     if (workDescription !== undefined) overtimeRequest.workDescription = workDescription;
     if (disciplineCode !== undefined) overtimeRequest.disciplineCode = disciplineCode;
     if (area !== undefined) overtimeRequest.area = area;
+    if (compensationType !== undefined) {
+      if (!COMPENSATION_TYPES.includes(compensationType)) {
+        return res.status(400).json({ message: 'Invalid compensation type' });
+      }
+      overtimeRequest.compensationType = compensationType;
+    }
 
     await overtimeRequest.save();
 
@@ -229,6 +267,7 @@ exports.deleteOvertimeRequest = async (req, res) => {
 // @access  Private/Admin/Manager
 exports.approveOvertimeRequest = async (req, res) => {
   try {
+    const { compensationType } = req.body || {};
     const overtimeRequest = await OvertimeRequest.findById(req.params.id);
 
     if (!overtimeRequest) {
@@ -239,14 +278,49 @@ exports.approveOvertimeRequest = async (req, res) => {
       return res.status(400).json({ message: 'Request has already been processed' });
     }
 
+    const requestedCompensationType = overtimeRequest.compensationType || 'ot_payment';
+    const approvedCompensationType = compensationType || requestedCompensationType;
+
+    if (!COMPENSATION_TYPES.includes(approvedCompensationType)) {
+      return res.status(400).json({ message: 'Invalid compensation type' });
+    }
+
+    const approvedHours = calculateApprovedHours(overtimeRequest.dailyHours);
+    const leaveCreditHours = approvedCompensationType === 'replacement_leave' ? approvedHours : 0;
+    const leaveCreditDays = approvedCompensationType === 'replacement_leave'
+      ? Number((approvedHours / 8).toFixed(2))
+      : 0;
+
     overtimeRequest.status = 'approved';
     overtimeRequest.approvedBy = req.user.id;
     overtimeRequest.approvedAt = new Date();
+    overtimeRequest.approvedCompensationType = approvedCompensationType;
+    overtimeRequest.approvedTotalHours = approvedHours;
+    overtimeRequest.leaveCreditHours = leaveCreditHours;
+    overtimeRequest.leaveCreditDays = leaveCreditDays;
 
     await overtimeRequest.save();
 
-    // Auto-fill timesheet entries with approved overtime hours
-    await autoFillTimesheetWithOvertimeHours(overtimeRequest);
+    if (approvedCompensationType === 'ot_payment') {
+      await autoFillTimesheetWithOvertimeHours(overtimeRequest);
+    } else {
+      await creditReplacementLeave(overtimeRequest, req.user.id);
+    }
+
+    await OvertimeSettlement.create({
+      requestId: overtimeRequest._id,
+      userId: overtimeRequest.userId,
+      projectId: overtimeRequest.projectId,
+      compensationType: approvedCompensationType,
+      approvedHours,
+      leaveCreditHours,
+      leaveCreditDays,
+      settledBy: req.user.id,
+      settledAt: new Date()
+    });
+
+    overtimeRequest.settlementProcessed = true;
+    await overtimeRequest.save();
 
     const populatedRequest = await OvertimeRequest.findById(overtimeRequest._id)
       .populate('userId', 'firstName lastName email department')
@@ -259,6 +333,41 @@ exports.approveOvertimeRequest = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+const creditReplacementLeave = async (overtimeRequest, approverUserId) => {
+  try {
+    const approvedHours = calculateApprovedHours(overtimeRequest.dailyHours);
+    const creditDays = Number((approvedHours / 8).toFixed(2));
+
+    const user = await User.findById(overtimeRequest.userId);
+    if (!user) {
+      throw new Error('User not found for leave crediting');
+    }
+
+    const updatedHours = Number(((user.replacementLeaveBalanceHours || 0) + approvedHours).toFixed(2));
+    const updatedDays = Number(((user.replacementLeaveBalanceDays || 0) + creditDays).toFixed(2));
+
+    user.replacementLeaveBalanceHours = updatedHours;
+    user.replacementLeaveBalanceDays = updatedDays;
+    await user.save();
+
+    await LeaveTransaction.create({
+      userId: user._id,
+      sourceType: 'overtime_approval',
+      sourceId: overtimeRequest._id,
+      transactionType: 'credit',
+      hours: approvedHours,
+      days: creditDays,
+      balanceHoursAfter: updatedHours,
+      balanceDaysAfter: updatedDays,
+      remarks: `OT converted to replacement leave for week starting ${new Date(overtimeRequest.weekStartDate).toLocaleDateString('en-MY')}`,
+      createdBy: approverUserId
+    });
+  } catch (error) {
+    console.error('Error crediting replacement leave:', error);
+    throw error;
   }
 };
 
@@ -409,6 +518,11 @@ exports.validateOvertimeHours = async (req, res) => {
       userId: req.user.id,
       projectId,
       status: 'approved',
+      $or: [
+        { approvedCompensationType: 'ot_payment' },
+        { approvedCompensationType: { $exists: false }, compensationType: { $ne: 'replacement_leave' } },
+        { approvedCompensationType: { $exists: false }, compensationType: { $exists: false } }
+      ],
       weekStartDate: { $lte: entryDate },
       weekEndDate: { $gte: entryDate }
     });
@@ -442,6 +556,76 @@ exports.validateOvertimeHours = async (req, res) => {
     }
 
     res.json({ valid: true, approvedRequest, approvedHours: dayEntry.hours });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get current user's overtime/leave summary
+// @route   GET /api/overtime-requests/my-summary
+// @access  Private
+exports.getMyOvertimeSummary = async (req, res) => {
+  try {
+    const [user, settlements] = await Promise.all([
+      User.findById(req.user.id).select('replacementLeaveBalanceHours replacementLeaveBalanceDays'),
+      OvertimeSettlement.find({ userId: req.user.id }).sort({ settledAt: -1 }).limit(10)
+    ]);
+
+    const totalApprovedOtPaymentHours = settlements
+      .filter((s) => s.compensationType === 'ot_payment')
+      .reduce((sum, s) => sum + (s.approvedHours || 0), 0);
+
+    const totalConvertedToLeaveHours = settlements
+      .filter((s) => s.compensationType === 'replacement_leave')
+      .reduce((sum, s) => sum + (s.leaveCreditHours || 0), 0);
+
+    res.json({
+      success: true,
+      summary: {
+        replacementLeaveBalanceHours: user?.replacementLeaveBalanceHours || 0,
+        replacementLeaveBalanceDays: user?.replacementLeaveBalanceDays || 0,
+        totalApprovedOtPaymentHours,
+        totalConvertedToLeaveHours
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get current user's replacement leave history
+// @route   GET /api/overtime-requests/my-leave-history
+// @access  Private
+exports.getMyReplacementLeaveHistory = async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '50', 10), 1), 200);
+
+    const [user, transactions] = await Promise.all([
+      User.findById(req.user.id).select('replacementLeaveBalanceHours replacementLeaveBalanceDays'),
+      LeaveTransaction.find({ userId: req.user.id })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('createdBy', 'firstName lastName')
+    ]);
+
+    const totalCreditedHours = transactions
+      .filter((tx) => tx.transactionType === 'credit')
+      .reduce((sum, tx) => sum + (tx.hours || 0), 0);
+
+    const totalDebitedHours = transactions
+      .filter((tx) => tx.transactionType === 'debit')
+      .reduce((sum, tx) => sum + Math.abs(tx.hours || 0), 0);
+
+    res.json({
+      success: true,
+      summary: {
+        replacementLeaveBalanceHours: user?.replacementLeaveBalanceHours || 0,
+        replacementLeaveBalanceDays: user?.replacementLeaveBalanceDays || 0,
+        totalCreditedHours,
+        totalDebitedHours
+      },
+      transactions
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

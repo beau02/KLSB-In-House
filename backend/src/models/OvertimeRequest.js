@@ -65,6 +65,31 @@ const overtimeRequestSchema = new mongoose.Schema({
   area: {
     type: String
   },
+  compensationType: {
+    type: String,
+    enum: ['ot_payment', 'replacement_leave'],
+    default: 'ot_payment'
+  },
+  approvedCompensationType: {
+    type: String,
+    enum: ['ot_payment', 'replacement_leave']
+  },
+  approvedTotalHours: {
+    type: Number,
+    default: 0
+  },
+  leaveCreditHours: {
+    type: Number,
+    default: 0
+  },
+  leaveCreditDays: {
+    type: Number,
+    default: 0
+  },
+  settlementProcessed: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],

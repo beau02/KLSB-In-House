@@ -18,6 +18,7 @@ import { ProjectCostingPage } from './pages/ProjectCostingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { OvertimeRequestPage } from './pages/OvertimeRequestPage';
 import { OvertimeApprovalPage } from './pages/OvertimeApprovalPage';
+import { ReplacementLeaveHistoryPage } from './pages/ReplacementLeaveHistoryPage';
 
 const lightTheme = createTheme({
   palette: {
@@ -544,6 +545,16 @@ function AppContent() {
                 <ProtectedRoute>
                   <Layout>
                     <OvertimeApprovalPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/replacement-leave"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ReplacementLeaveHistoryPage />
                   </Layout>
                 </ProtectedRoute>
               }
