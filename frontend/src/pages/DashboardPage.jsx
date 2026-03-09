@@ -28,7 +28,7 @@ import {
   CheckCircleOutline
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { timesheetService, projectService, statsService } from '../services';
+import { statsService } from '../services';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -65,56 +65,18 @@ export const DashboardPage = () => {
 
   const loadDashboardData = async () => {
     try {
-      const isAdmin = user?.role === 'admin' || user?.role === 'manager';
-      
-      const promises = [
-        timesheetService.getAll(),
-        projectService.getAll({ status: 'active' })
-      ];
-      
-      if (isAdmin) {
-        promises.push(statsService.getDashboard());
-      }
-      
-      const results = await Promise.all(promises);
-      const [timesheetsRes, projectsRes, dashboardStats] = results;
-
-      const timesheets = timesheetsRes.timesheets || [];
-      
-      // For regular users, filter to only their timesheets
-      const relevantTimesheets = isAdmin 
-        ? timesheets 
-        : timesheets.filter(t => t.userId?._id === user.id || t.userId === user.id);
-
-      // Get projects
-      let myProjects = [];
-      if (isAdmin) {
-        myProjects = projectsRes.projects || [];
-      } else {
-        const userProjectIds = [...new Set(relevantTimesheets.map(t => t.projectId?._id || t.projectId))];
-        myProjects = (projectsRes.projects || []).filter(p => userProjectIds.includes(p._id));
-      }
-
-      // Calculate LAST month hours (since timesheets are for the previous month)
-      const currentDate = new Date();
-      const lastMonth = currentDate.getMonth() === 0 ? 12 : currentDate.getMonth();
-      const lastMonthYear = currentDate.getMonth() === 0 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
-      
-      const currentMonthHours = isAdmin
-        ? (dashboardStats?.stats?.currentMonthHours || 0)
-        : relevantTimesheets
-            .filter(t => t.month === lastMonth && t.year === lastMonthYear && t.status === 'approved')
-            .reduce((sum, t) => sum + (t.totalHours || 0), 0);
+      const dashboardRes = await statsService.getDashboard();
+      const dashboardStats = dashboardRes?.stats || {};
 
       setStats({
-        totalTimesheets: relevantTimesheets.length,
-        pendingTimesheets: relevantTimesheets.filter(t => t.status === 'submitted').length,
-        approvedTimesheets: relevantTimesheets.filter(t => t.status === 'approved').length,
-        rejectedTimesheets: relevantTimesheets.filter(t => t.status === 'rejected').length,
-        myProjects,
-        currentMonthHours,
-        totalStaff: isAdmin ? (dashboardStats?.stats?.totalStaff || 0) : 0,
-        activeProjects: projectsRes.count || 0
+        totalTimesheets: dashboardStats.totalTimesheets || 0,
+        pendingTimesheets: dashboardStats.pendingTimesheets || 0,
+        approvedTimesheets: dashboardStats.approvedTimesheets || 0,
+        rejectedTimesheets: dashboardStats.rejectedTimesheets || 0,
+        myProjects: dashboardStats.myProjects || [],
+        currentMonthHours: dashboardStats.currentMonthHours || 0,
+        totalStaff: dashboardStats.totalStaff || 0,
+        activeProjects: dashboardStats.activeProjects || 0
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);

@@ -264,8 +264,8 @@ export const reportService = {
 
 export const statsService = {
   getDashboard: async () => {
-    const response = await api.get('/stats/dashboard');
-    return response.data;
+    const { data } = await cachedGet('/stats/dashboard', { ttl: 120 });
+    return data;
   }
 };
 
